@@ -34,21 +34,47 @@ class RegisterScreen extends StatelessWidget {
                   )
                 ),
 
-              Padding(padding: EdgeInsets.all(22),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+              Padding(padding: EdgeInsets.all(30),
+              child: Center(
+                child: Column(
+                  children: [
+                  SizedBox(height: 20,),
+                      //logo
+                  Image.asset('assets/login/logo.png'),
+                
+                  SizedBox(height: 10),
 
-                SizedBox(height: 20,),
-                    //logo
-                Image.asset('assets/login/logo.png'),
+                  Text(
+                    "PICK MY DISH",
+                    style: title,
+                    ),
 
-                SizedBox(height: 10),
-                Text(
-                  "PICK MY DISH",
-                  style: title,
-                  )
-                ]
+                  Text(
+                    "Cook in easy way",
+                    style: text,
+                  ),
+
+                  SizedBox(height: 5),
+
+                  Text(
+                    "Register",
+                    style: title,
+                  ),
+
+                  SizedBox(height: 15),   
+
+                  Row(
+                    children: [Expanded(
+                      child: TextField(
+                        decoration: InputDecoration(
+                          hintText: "Full Name",
+                          hintStyle: placeHolder,
+                        ),
+                      ),
+                    )],
+                  ) 
+                  ]
+                ),
               ),
             ),
           ],
