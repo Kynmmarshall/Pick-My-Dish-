@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:pick_my_dish/constants.dart';
+import 'package:dropdown_search/dropdown_search.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -16,6 +17,7 @@ class _HomeScreenState extends State<HomeScreen> {
   List<String> emotions = ['Happy', 'Sad', 'Energetic', 'Comfort', 'Healthy'];
   List<String> ingredients = ['Eggs', 'Flour', 'Chicken', 'Vegetables', 'Rice', 'Pasta', 'Cheese', 'Milk'];
   List<String> timeOptions = ['15 mins', '30 mins', '1 hour', '2+ hours'];
+  String ingredientSearch = '';
 
   @override
   Widget build(BuildContext context) {
@@ -104,57 +106,23 @@ class _HomeScreenState extends State<HomeScreen> {
                     SizedBox(height: 15),
 
                     // Recipe Cards
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildRecipeCard("Breakfast", "Toast with Berries", "1003"),
-                        ),
-                        SizedBox(width: 15),
-                        Expanded(
-                          child: _buildRecipeCard("Dinner", "Chicken Burger", "2008"),
-                        ),
-                      ],
+                    // Recipe Cards - Responsive layout
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                
+                          return Column(
+                            
+                            children: [
+                              _buildRecipeCard("Breakfast", "Toast with Berries", "1003"),
+                              SizedBox(height: 15),
+                              _buildRecipeCard("Dinner", "Chicken Burger", "2008"),
+                            ],
+                          );
+                        }
                     ),
                     SizedBox(height: 30),
 
-                    // Recommended Section
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          "Recommended",
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        Text(
-                          "See All",
-                          style: TextStyle(
-                            color: Colors.orange,
-                            fontSize: 14,
-                          ),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: 15),
-
-                    // Recommended Items
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        children: [
-                          _buildRecommendedCard("Chocolate Cake"),
-                          SizedBox(width: 15),
-                          _buildRecommendedCard("Cup Cake"),
-                          SizedBox(width: 15),
-                          _buildRecommendedCard("Chocolate Cake"),
-                          SizedBox(width: 15),
-                          _buildRecommendedCard("Chocolate Cake"),
-                        ],
-                      ),
-                    ),
+                    
                   ],
                 ),
               ),
@@ -204,26 +172,34 @@ class _HomeScreenState extends State<HomeScreen> {
           SizedBox(height: 15),
 
           // Ingredients Selection
-          Text("Select Ingredients:", style: text),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: ingredients.map((ingredient) {
-              return FilterChip(
-                label: Text(ingredient),
-                selected: selectedIngredients.contains(ingredient),
-                onSelected: (selected) {
-                  setState(() {
-                    if (selected) {
-                      selectedIngredients.add(ingredient);
-                    } else {
-                      selectedIngredients.remove(ingredient);
-                    }
-                  });
-                },
-              );
-            }).toList(),
+          DropdownSearch<String>.multiSelection(
+          items: ingredients,
+          popupProps: PopupPropsMultiSelection.menu(
+            showSearchBox: true,
+            searchFieldProps: TextFieldProps(
+              decoration: InputDecoration(hintText: "Search ingredients..."),
+            ),
           ),
+          onChanged: (List<String> selectedItems) {
+            setState(() {
+              selectedIngredients = selectedItems;
+            });
+          },
+          selectedItems: selectedIngredients,
+          dropdownDecoratorProps: DropDownDecoratorProps(
+            dropdownSearchDecoration: InputDecoration(
+              hintText: "Select ingredients",
+              border: OutlineInputBorder(),
+            ),
+          ),
+        ),
+
+
+
+
+
+
+
           SizedBox(height: 15),
 
           // Time Selection
@@ -237,7 +213,7 @@ class _HomeScreenState extends State<HomeScreen> {
             items: timeOptions.map((time) {
               return DropdownMenuItem(
                 value: time,
-                child: Text(time, style: TextStyle(color: Colors.black)),
+                child: Text(time, style: TextStyle(color: Colors.orange)),
               );
             }).toList(),
             onChanged: (value) {
@@ -274,12 +250,13 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildRecipeCard(String category, String title, String calories) {
     return Container(
       padding: EdgeInsets.all(15),
+      width: double.infinity,
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.1),
         borderRadius: BorderRadius.circular(15),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Text(
             category,
@@ -294,36 +271,6 @@ class _HomeScreenState extends State<HomeScreen> {
           Text(
             calories,
             style: TextStyle(color: Colors.white70, fontSize: 12),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildRecommendedCard(String title) {
-    return Container(
-      width: 150,
-      padding: EdgeInsets.all(15),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(15),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
-          ),
-          SizedBox(height: 5),
-          Row(
-            children: [
-              Icon(Icons.star, color: Colors.orange, size: 16),
-              Icon(Icons.star, color: Colors.orange, size: 16),
-              Icon(Icons.star, color: Colors.orange, size: 16),
-              Icon(Icons.star, color: Colors.orange, size: 16),
-              Icon(Icons.star_border, color: Colors.orange, size: 16),
-            ],
           ),
         ],
       ),
