@@ -1,4 +1,4 @@
-name: pick-my-dish
+name: pick_my_dish
 description: "A Flutter app that helps you decide what to eat"
 publish_to: 'none'
 
