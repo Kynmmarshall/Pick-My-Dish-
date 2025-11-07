@@ -1,3 +1,4 @@
+import 'dart:ui'; 
 import 'package:flutter/material.dart';
 import 'package:pick_my_dish/constants.dart';
 import 'package:dropdown_search/dropdown_search.dart';
@@ -19,9 +20,13 @@ class _HomeScreenState extends State<HomeScreen> {
   List<String> timeOptions = ['15 mins', '30 mins', '1 hour', '2+ hours'];
   String ingredientSearch = '';
 
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      key: _scaffoldKey,
+      drawer: _buildSideMenu(),
       appBar: AppBar(
       backgroundColor: Colors.black,
       elevation: 0,
@@ -29,7 +34,7 @@ class _HomeScreenState extends State<HomeScreen> {
       padding: EdgeInsets.only(left: 30, top: 30),
       child:GestureDetector(
         onTap: () {
-          // Handle menu click
+          _scaffoldKey.currentState?.openDrawer();
         },
         child: Image.asset(
           'assets/icons/hamburger.png',
@@ -280,6 +285,75 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Widget _buildSideMenu() {
+  return Container(
+    width: MediaQuery.of(context).size.width * 0.8,
+    decoration: BoxDecoration(
+      color: Colors.black.withOpacity(0.8),
+      borderRadius: BorderRadius.only(
+        topRight: Radius.circular(20),
+        bottomRight: Radius.circular(20),
+      ),
+    ),
+    child: Stack(
+      children: [
+
+        // Background Image
+        Container(
+          decoration: BoxDecoration(
+            image: DecorationImage(
+              image: AssetImage("assets/sideMenu/background.png"),
+              fit: BoxFit.cover,
+            ),
+          ),
+        ),
+        
+        Padding(
+          padding: EdgeInsets.all(30),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(height: 60),
+              
+              // Profile Section
+              CircleAvatar(
+                radius: 40,
+                backgroundImage: AssetImage('assets/login/logo.png'), // Replace with profile image
+              ),
+              SizedBox(height: 15),
+              Text("Username", style: title.copyWith(fontSize: 22)),
+              SizedBox(height: 5),
+              GestureDetector(
+                onTap: () {
+                  // Navigate to profile
+                  Navigator.pop(context);
+                },
+                child: Text("View Profile", style: footerClickable),
+              ),
+              SizedBox(height: 40),
+              
+              // Menu Items
+              _buildMenuItem(Icons.home, "Home", () {}),
+              _buildMenuItem(Icons.favorite, "Favorites", () {}),
+              Spacer(),
+              _buildMenuItem(Icons.logout, "Logout", () {}),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+  Widget _buildMenuItem(IconData icon, String title, Function onTap) {
+  return ListTile(
+    leading: Icon(icon, color: Colors.orange, size: 28),
+    title: Text(title, style: text.copyWith(fontSize: 18)),
+    onTap: () => onTap(),
+    contentPadding: EdgeInsets.zero,
+  );
+}
+
   void _generateRecipes() {
     // Logic to generate recipes based on selections
     print("Emotion: $selectedEmotion");
@@ -288,4 +362,5 @@ class _HomeScreenState extends State<HomeScreen> {
     
     // Navigate to results screen or show dialog with personalized recipes
   }
+
 }

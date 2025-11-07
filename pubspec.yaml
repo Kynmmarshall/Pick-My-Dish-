@@ -64,6 +64,7 @@ flutter:
    - assets/logo/
    - assets/login/
    - assets/icons/
+   - assets/sideMenu/
    
 
   # An image asset can refer to one or more resolution-specific "variants", see
