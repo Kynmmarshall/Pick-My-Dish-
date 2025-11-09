@@ -20,6 +20,7 @@ class FavoritesScreen extends StatelessWidget {
           padding: const EdgeInsets.all(30),
           child: Column(
             children: [
+              SizedBox(height: 30),
               // Header
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
