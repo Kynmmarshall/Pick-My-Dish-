@@ -1,79 +1,22 @@
-# Project name - used to identify your app in the Flutter ecosystem
-name: pick_my_dish
+name: pickmydish
+description: A Flutter app for discovering recipes based on ingredients and mood.
 
-# Project description - shown in pub.dev and helps others understand your app's purpose
-description: "A Flutter app that helps you decide what to eat with personalized recipe suggestions"
-
-# Publishing configuration - 'none' means this is a private app not for pub.dev
 publish_to: 'none'
 
-# Version number format: major.minor.patch+build
-# - 1.0.0: Semantic version (major.minor.patch)
-# - +0: Build number (incremented for each build)
-version: 1.0.0+0
+version: 1.0.0+1
 
-# Flutter SDK version requirements
 environment:
-  sdk: '>=3.0.0 <4.0.0'  # Requires Dart SDK 3.0.0 or higher but less than 4.0.0
+  sdk: '>=3.0.0 <4.0.0'
 
-# App dependencies - external packages your app needs to run
 dependencies:
   flutter:
-    sdk: flutter  # Flutter SDK itself is the primary dependency
+    sdk: flutter
+  sqflite: ^2.2.0
+  path: ^1.8.3
 
-# Development dependencies - packages only needed during development
 dev_dependencies:
   flutter_test:
-    sdk: flutter  # Flutter's testing framework
-  flutter_lints: ^3.0.0  # Code linting rules for better code quality
+    sdk: flutter
 
-# Flutter-specific configuration
 flutter:
-  # Enable Material Design components and theming
   uses-material-design: true
-
-  # Assets configuration - uncomment and add your image files here
-  # assets:
-  #   - images/logo.png
-  #   - images/splash_background.jpg
-  #   - images/recipe_placeholder.png
-
-  # Fonts configuration - uncomment and add custom fonts here
-  # Example for Inter font family (referenced in the app theme)
-  # fonts:
-  #   - family: Inter  # Font family name used in TextStyle
-  #     fonts:
-  #       - asset: fonts/Inter-Regular.ttf  # Regular weight
-  #         weight: 400
-  #       - asset: fonts/Inter-Medium.ttf   # Medium weight (500)
-  #         weight: 500
-  #       - asset: fonts/Inter-SemiBold.ttf # Semi-bold weight (600)
-  #         weight: 600
-  #       - asset: fonts/Inter-Bold.ttf     # Bold weight (700)
-  #         weight: 700
-
-  # Other possible Flutter configurations (commented out examples):
-  #
-  # Icons configuration (if using custom app icons):
-  # icons:
-  #   android: true
-  #   ios: true
-  #   image_path: "assets/icon/icon.png"
-  #
-  # Splash screen configuration:
-  # splash:
-  #   image: assets/splash.png
-  #   color: "#FFFFFF"
-  #
-  # App flavors/environments (for different build types):
-  # flavors:
-  #   development:
-  #     resValue:
-  #       android:
-  #         string:
-  #           app_name: "PickMyDish Dev"
-  #   production:
-  #     resValue:
-  #       android:
-  #         string:
-  #           app_name: "PickMyDish"
