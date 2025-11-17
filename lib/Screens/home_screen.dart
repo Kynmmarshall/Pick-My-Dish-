@@ -437,7 +437,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   fillColor: Colors.grey[900],
                 ),
               ),
-              menuProps: MenuProps(backgroundColor: Colors.grey[900]),
+              menuProps: MenuProps(
+                backgroundColor: const Color.fromARGB(255, 237, 229, 229),
+              ),
             ),
             onChanged: (List<String>? selectedItems) {
               setState(() {
@@ -472,7 +474,12 @@ class _HomeScreenState extends State<HomeScreen> {
             items: timeOptions.map((time) {
               return DropdownMenuItem(
                 value: time,
-                child: Text(time, style: const TextStyle(color: Colors.orange)),
+                child: Text(
+                  time,
+                  style: const TextStyle(
+                    color: Color.fromARGB(255, 255, 123, 0),
+                  ),
+                ),
               );
             }).toList(),
             onChanged: (value) {
@@ -641,7 +648,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       backgroundImage: AssetImage('assets/login/noPicture.png'),
                     ),
                     const SizedBox(width: 25),
-                    Text("kynmmarshall", style: title.copyWith(fontSize: 22)),
+                    Text("FAHDIL", style: title.copyWith(fontSize: 22)),
                   ],
                 ),
                 const SizedBox(height: 5),
