@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:pick_my_dish/Screens/favorite_screen.dart';
 import 'package:pick_my_dish/Screens/profile_screen.dart';
 import 'package:pick_my_dish/Screens/recipe_screen.dart';
+import 'package:pick_my_dish/Services/api_service.dart';
 import 'package:pick_my_dish/constants.dart';
 import 'package:dropdown_search/dropdown_search.dart';
 
@@ -24,6 +25,18 @@ class _HomeScreenState extends State<HomeScreen> {
   String ingredientSearch = '';
 
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+
+
+// In initState() of LoginScreen or HomeScreen
+@override
+void initState() {
+  super.initState();
+  // Test connection first
+  ApiService.testConnection();
+  // Then test auth
+  ApiService.testAuth();
+}
+
 
   @override
   Widget build(BuildContext context) {
