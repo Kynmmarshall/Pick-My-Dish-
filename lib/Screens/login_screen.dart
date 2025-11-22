@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:pick_my_dish/Screens/Register_screen.dart';
 import 'package:pick_my_dish/constants.dart';
-import 'package:pick_my_dish/screens/register_screen.dart' hide RegisterScreen;
+import 'package:pick_my_dish/screens/register_screen.dart';
 import 'package:pick_my_dish/screens/home_screen.dart';
 
 class LoginScreen extends StatefulWidget {
