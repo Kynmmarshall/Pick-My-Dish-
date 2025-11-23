@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:pick_my_dish/Providers/user_provider.dart';
 import 'package:pick_my_dish/Screens/login_screen.dart';
 import 'package:pick_my_dish/constants.dart';
 import 'package:pick_my_dish/services/database_service.dart';
@@ -8,6 +9,7 @@ import 'package:pick_my_dish/Screens/favorite_screen.dart';
 import 'package:pick_my_dish/Screens/profile_screen.dart';
 import 'package:pick_my_dish/Screens/recipe_screen.dart';
 import 'package:dropdown_search/dropdown_search.dart';
+import 'package:provider/provider.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -292,7 +294,20 @@ class _HomeScreenState extends State<HomeScreen> {
                     // Welcome Section
                     Row(children: [Text("Welcome", style: title),
                     SizedBox(width: 10),
-                    Text('FAHDIL!', style: title.copyWith(color: Colors.orange)),],),
+                    Expanded(
+                    child: FittedBox( // Scales text to fit
+                      fit: BoxFit.scaleDown,
+                      child: Consumer<UserProvider>(
+                        builder: (context, userProvider, child) {
+                          return Text(
+                            '${userProvider.username}!', 
+                            style: title.copyWith(color: Colors.orange),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                    ]),
                     const SizedBox(height: 8),
                     Text(
                       "What would you like to cook today?",

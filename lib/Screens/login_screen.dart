@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:pick_my_dish/Models/user_model.dart';
+import 'package:pick_my_dish/Providers/user_provider.dart';
 import 'package:pick_my_dish/Services/api_service.dart';
 import 'package:pick_my_dish/constants.dart';
 import 'package:pick_my_dish/Screens/register_screen.dart';
 import 'package:pick_my_dish/Screens/home_screen.dart';
+import 'package:provider/provider.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -27,6 +30,10 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
+
+    // Get email from your TextEditingController
+    final email = _emailController.text.trim();
+
     // Show loading
     showDialog(
       context: context,
@@ -48,10 +55,18 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (success) {
         // Login successful - navigate to home
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
+      userProvider.setUser(User(
+        username: email.split('@').first, // Get this from your API response
+        email: email,
+      ));
+      
+      if (context.mounted) {
         Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const HomeScreen()),
+          context, 
+          MaterialPageRoute(builder: (context) => HomeScreen())
         );
+      }
       } else {
         // Login failed
         ScaffoldMessenger.of(context).showSnackBar(
