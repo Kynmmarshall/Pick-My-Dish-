@@ -16,6 +16,19 @@ class UserProvider with ChangeNotifier {
   /// when no user is available.
   String get username => _user?.username ?? 'User';
 
+  /// Returns the first name of the current user extracted from fullName,
+  /// or falls back to username, or 'User' if no user is available.
+  String get firstName => _user?.firstName ?? username;
+
+  /// Returns the full name of the current user, or empty string if not available.
+  String get fullName => _user?.fullName ?? '';
+
+  /// Returns the email of the current user, or empty string if not available.
+  String get email => _user?.email ?? '';
+
+  /// Returns the profile image URL of the current user, or null if not available.
+  String? get profileImage => _user?.profileImage;
+
   /// Indicates whether a user is currently logged in.
   bool get isLoggedIn => _user != null;
 
@@ -25,6 +38,14 @@ class UserProvider with ChangeNotifier {
   void setUser(User user) {
     _user = user;
     notifyListeners(); // Notify widgets that depend on user data.
+  }
+
+  /// Create and set user from JSON data (typically from API response).
+  ///
+  /// Convenience method that uses [User.fromJson] constructor.
+  void setUserFromJson(Map<String, dynamic> userData) {
+    _user = User.fromJson(userData);
+    notifyListeners();
   }
 
   /// Update only the username for the current user and notify listeners.
@@ -38,9 +59,57 @@ class UserProvider with ChangeNotifier {
     }
   }
 
+  /// Update the user's full name and notify listeners.
+  ///
+  /// If there is no current user, this method does nothing.
+  void updateFullName(String newFullName) {
+    if (_user != null) {
+      _user = _user!.copyWith(fullName: newFullName);
+      notifyListeners();
+    }
+  }
+
+  /// Update the user's profile image and notify listeners.
+  ///
+  /// If there is no current user, this method does nothing.
+  void updateProfileImage(String newProfileImage) {
+    if (_user != null) {
+      _user = _user!.copyWith(profileImage: newProfileImage);
+      notifyListeners();
+    }
+  }
+
+  /// Update multiple user fields at once and notify listeners.
+  ///
+  /// Useful for profile updates. If there is no current user, this method does nothing.
+  void updateUserProfile({
+    String? username,
+    String? fullName,
+    String? profileImage,
+  }) {
+    if (_user != null) {
+      _user = _user!.copyWith(
+        username: username,
+        fullName: fullName,
+        profileImage: profileImage,
+      );
+      notifyListeners();
+    }
+  }
+
   /// Clear the current user (log out) and notify listeners.
   void clearUser() {
     _user = null;
     notifyListeners();
+  }
+
+  /// Debug method to print current user state
+  void printUserState() {
+    if (_user == null) {
+      debugPrint('UserProvider: No user logged in');
+    } else {
+      debugPrint('UserProvider: Current user - ${_user!.toString()}');
+      debugPrint('UserProvider: First name - $firstName');
+    }
   }
 }

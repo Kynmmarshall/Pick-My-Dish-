@@ -45,21 +45,43 @@ class _LoginScreenState extends State<LoginScreen> {
 
     try {
       // Call your backend API
-      bool success = await ApiService.login(
-        _emailController.text.trim(),
-        _passwordController.text,
-      );
+      final Map<String, dynamic>? response = await ApiService.login(
+  _emailController.text.trim(),
+  _passwordController.text,
+);
+
+if (response != null && response['user'] != null) {
+  final userProvider = Provider.of<UserProvider>(context, listen: false);
+  
+  // Use the actual user data from API
+  userProvider.setUser(User.fromJson(response['user']));
+  
+  if (context.mounted) {
+    Navigator.pushReplacement(
+      context, 
+      MaterialPageRoute(builder: (context) => HomeScreen())
+    );
+  }
+} else {
+  // Handle error
+  final errorMessage = response?['error'] ?? 'Login failed';
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(errorMessage, style: text),
+        backgroundColor: Colors.red,
+      ),
+    );
+  }
 
       // Hide loading
       Navigator.pop(context);
 
-      if (success) {
+      if (response != null && response['user'] != null) {
         // Login successful - navigate to home
       final userProvider = Provider.of<UserProvider>(context, listen: false);
-      userProvider.setUser(User(
-        username: email.split('@').first, // Get this from your API response
-        email: email,
-      ));
+      
+      // Use the actual user data from API
+      userProvider.setUser(User.fromJson(response['user']));
       
       if (context.mounted) {
         Navigator.pushReplacement(
@@ -217,37 +239,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
 
                       const SizedBox(height: 20),
-                      // Add this after the Login Button and before Google Sign In
-
-// TEST BUTTONS - Remove these later
-Row(
-  children: [
-    Expanded(
-      child: ElevatedButton(
-        onPressed: _testRegistration,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.green,
-          minimumSize: const Size(0, 40),
-        ),
-        child: Text("Test Register", style: text.copyWith(fontSize: 14)),
-      ),
-    ),
-    const SizedBox(width: 10),
-    Expanded(
-      child: ElevatedButton(
-        onPressed: _testLogin,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.blue,
-          minimumSize: const Size(0, 40),
-        ),
-        child: Text("Test Login", style: text.copyWith(fontSize: 14)),
-      ),
-    ),
-  ],
-),
-
-const SizedBox(height: 20),
-// END TEST BUTTONS
                       // Google Sign In
                       GestureDetector(
                         onTap: () {
@@ -324,41 +315,5 @@ const SizedBox(height: 20),
       ),
     );
   }
-
-void _testRegistration() async {
-  debugPrint('🔐 Testing registration...');
-  
-  try {
-    bool success = await ApiService.register(
-      'user1', 
-      'user1@example.com', 
-      'passwffdfd23'
-    );
-    
-    if (success) {
-      debugPrint('✅ Registration successful!');
-    } else {
-      debugPrint('❌ Registration failed - check backend logs');
-    }
-  } catch (e) {
-    debugPrint('❌ Registration error: $e');
-  }
-}
-
-void _testLogin() async {
-  debugPrint('🔐 Testing login...');
-  
-  try {
-    bool success = await ApiService.login('Jane@example.com', 'password123');
-    
-    if (success) {
-      debugPrint('✅ Login successful!');
-    } else {
-      debugPrint('❌ Login failed - user may not exist');
-    }
-  } catch (e) {
-    debugPrint('❌ Login error: $e');
-  }
-}
 
 }

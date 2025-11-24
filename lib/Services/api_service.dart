@@ -34,26 +34,26 @@ class ApiService {
 
   
   //login user
-  static Future<bool> login(String email, String password) async {
+  static Future<Map<String, dynamic>?>  login(String email, String password) async {
     try {
       final response = await http.post(
         Uri.parse('$baseUrl/api/auth/login'),
         body: json.encode({'email': email, 'password': password}),
         headers: {'Content-Type': 'application/json'},
       );
-      
+      final errorData = json.decode(response.body);
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         debugPrint('✅ Login successful: ${data['message']}');
         debugPrint('👤 User: ${data['user']}');
-        return true;
+        return data;
       } else {
         debugPrint('❌ Login failed: ${response.statusCode} - ${response.body}');
-        return false;
+        return {'error': errorData['error'] ?? 'Login failed'};
       }
     } catch (e) {
       debugPrint('❌ Login error: $e');
-      return false;
+      return {'error': 'Login error: $e'};
     }
   }
 
@@ -91,9 +91,7 @@ static Future<bool> register(String fullName, String email, String password) asy
   bool registered = await register('Test User', 'test@example.com', 'password123');
   debugPrint(registered ? '✅ Registration successful' : '❌ Registration failed');
   
-  // Test Login
-  bool loggedIn = await login('test@example.com', 'password123');
-  debugPrint(loggedIn ? '✅ Login successful' : '❌ Login failed');
+
 }
 
 // Add this test
