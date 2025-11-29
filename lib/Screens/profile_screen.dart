@@ -1,5 +1,11 @@
 import 'package:flutter/material.dart';
+import 'dart:io';
+import 'package:image_picker/image_picker.dart';
+import 'package:pick_my_dish/Providers/user_provider.dart';
+import 'package:pick_my_dish/Screens/login_screen.dart';
+import 'package:pick_my_dish/Services/api_service.dart';
 import 'package:pick_my_dish/constants.dart';
+import 'package:provider/provider.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -9,13 +15,75 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  String username = "kynmmarshall";
+  
   TextEditingController usernameController = TextEditingController();
+  bool _isEditing = false;
 
   @override
   void initState() {
-    super.initState();
-    usernameController.text = username;
+  super.initState();
+  final userProvider = Provider.of<UserProvider>(context, listen: false);
+  usernameController.text = userProvider.username;
+}
+
+  void _saveProfile() async {
+  // Add this check first
+  if (!mounted) return;
+  
+  final userProvider = Provider.of<UserProvider>(context, listen: false);
+  
+  bool success = await ApiService.updateUsername(
+    usernameController.text,
+    userProvider.userId  
+  );
+
+  
+  // Check mounted again after async operation
+  if (!mounted) return;
+  
+  if (success) {
+    userProvider.updateUsername(usernameController.text, userProvider.userId);
+    setState(() {
+      _isEditing = false;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Username updated!'), backgroundColor: Colors.green),
+    );
+  } else {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Update failed!'), backgroundColor: Colors.red),
+    );
+  }
+}
+
+  void _cancelEdit() {
+    setState(() {
+     // usernameController.text = ;
+      _isEditing = false;
+    });
+  }
+
+  void _pickImage() async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+    
+    if (pickedFile != null && context.mounted) {
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
+      bool success = await ApiService.updateProfilePicture(
+        pickedFile.path, 
+        userProvider.userId
+      );
+      
+      if (success) {
+        userProvider.updateProfilePicture(pickedFile.path);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Profile picture updated!', style: text),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -24,82 +92,241 @@ class _ProfileScreenState extends State<ProfileScreen> {
       body: Container(
         width: double.infinity,
         height: double.infinity,
-        decoration: const BoxDecoration(
-        color: Colors.black
-        ),
-        child: Stack(
-          children: [
-            // Back Button
-            Positioned(
-              top: 50,
-              left: 30,
-              child: GestureDetector(
-                onTap: () => Navigator.pop(context),
-                child: Icon(Icons.arrow_back, color: Colors.orange, size: iconSize),
+        decoration: const BoxDecoration(color: Colors.black),
+        child: SingleChildScrollView( // FIX: Add scrollable container
+          child: Stack(
+            children: [
+              // Back Button
+              Positioned(
+                top: 50,
+                left: 30,
+                child: GestureDetector(
+                  onTap: () {
+                    if (context.mounted) {
+                      Navigator.pop(context);
+                    }
+                  },
+                  child: const Icon(
+                    Icons.arrow_back,
+                    color: Colors.orange,
+                    size: iconSize,
+                  ),
+                ),
               ),
-            ),
-            
-            // Main Content
-            Center(
-              child: Container(
-                width: 300,
+
+              // Main Content
+              Padding(
+                padding: const EdgeInsets.all(30),
                 child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
+                    const SizedBox(height: 80),
+
                     // Profile Image with Edit Icon
                     Stack(
                       children: [
-                        CircleAvatar(
-                          radius: 60,
-                          backgroundImage: AssetImage('assets/login/noPicture.png'),
+                        Consumer<UserProvider>(
+                          builder: (context, userProvider, child) {
+                            return CircleAvatar(
+                              radius: 60,
+                              backgroundImage: userProvider.user?.profileImage != null
+                                  ? FileImage(File(userProvider.user!.profileImage!))
+                                  : const AssetImage('assets/login/noPicture.png') as ImageProvider,
+                            );
+                          },
                         ),
                         Positioned(
                           bottom: 0,
                           right: 0,
-                          child: Container(
-                            decoration: const BoxDecoration(
-                              color: Colors.orange,
-                              shape: BoxShape.circle,
+                          child: GestureDetector(
+                            onTap: _pickImage,
+                            child: Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: const BoxDecoration(
+                                color: Colors.orange,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.camera_alt,
+                                color: Colors.white,
+                                size: 20,
+                              ),
                             ),
-                            child: Icon(Icons.edit, color: Colors.white, size: iconSize),
                           ),
                         ),
                       ],
                     ),
-                    SizedBox(height: 30),
-                    
-                    // Username Text Field
-                    TextField(
-                      controller: usernameController,
-                      style: text,
-                      textAlign: TextAlign.center,
-                      decoration: InputDecoration(
-                        hintText: "Username",
-                        hintStyle: placeHolder,
-                        border: OutlineInputBorder(),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 15, vertical: 12),
+                    const SizedBox(height: 30),
+
+                    // Username Section
+                    Text("Username", style: mediumtitle),
+                    const SizedBox(height: 10),
+
+                    // FIX: Always render TextField but control visibility
+                    _isEditing
+                        ? Row(
+                            children: [
+                              Expanded(
+                                child: TextField(
+                                  key: const Key('username_field'), // FIX: Add key for testing
+                                  controller: usernameController,
+                                  style: text.copyWith(fontSize: 20),
+                                  textAlign: TextAlign.center,
+                                  decoration: InputDecoration(
+                                    hintText: "Enter username",
+                                    hintStyle: placeHolder,
+                                    border: const OutlineInputBorder(),
+                                    contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 15,
+                                      vertical: 12,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          )
+                        : 
+                        Consumer<UserProvider>(
+                        builder: (context, userProvider, child) {
+                   return Text("${userProvider.username}", style: title.copyWith(fontSize: 24));
+                }
+                ),         
+
+                    const SizedBox(height: 20),
+
+                    // Action Buttons
+                    if (_isEditing) ...[
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ElevatedButton(
+                              key: const Key('save_button'), // FIX: Add key
+                              onPressed: _saveProfile,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.green,
+                                minimumSize: const Size(double.infinity, 50),
+                              ),
+                              child: Text(
+                                "Save Changes",
+                                style: text.copyWith(fontSize: 18),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: ElevatedButton(
+                              key: const Key('cancel_button'), // FIX: Add key
+                              onPressed: _cancelEdit,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.red,
+                                minimumSize: const Size(double.infinity, 50),
+                              ),
+                              child: Text(
+                                "Cancel",
+                                style: text.copyWith(fontSize: 18),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ] else
+                      ElevatedButton(
+                        key: const Key('edit_button'), // FIX: Add key
+                        onPressed: () {
+                          setState(() {
+                            _isEditing = true;
+                          });
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.orange,
+                          minimumSize: const Size(double.infinity, 50),
+                        ),
+                        child: Text(
+                          "Edit Profile",
+                          style: text.copyWith(fontSize: 20),
+                        ),
+                      ),
+
+                    const SizedBox(height: 30),
+
+                    // Additional Profile Info
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.1), 
+                        borderRadius: BorderRadius.circular(15),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text("Profile Information", style: mediumtitle),
+                          const SizedBox(height: 15),
+                          _buildInfoRow(
+                            Icons.email,
+                            "Email",
+                            "kynmmarshall@example.com",
+                          ),
+                          const SizedBox(height: 10),
+                          _buildInfoRow(
+                            Icons.cake,
+                            "Member since",
+                            "January 2024",
+                          ),
+                          const SizedBox(height: 10),
+                          _buildInfoRow(
+                            Icons.favorite,
+                            "Favorite Recipes",
+                            "12 recipes",
+                          ),
+                        ],
                       ),
                     ),
-                    SizedBox(height: 20),
-                    
-                    // Upload Button
-                    ElevatedButton(
-                      onPressed: () {
-                        // Upload Profile Info logic
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.orange,
-                        minimumSize: Size(double.infinity, 50),
+
+                    const SizedBox(height: 30), // FIX: Replace Spacer with SizedBox
+
+                    // Logout Button
+                    Container(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        key: const Key('logout_button'), // FIX: Add key
+                        onPressed: () {
+                          if (context.mounted) {
+                            Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const LoginScreen(),
+                            ),
+                          );
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red,
+                          minimumSize: const Size(double.infinity, 50),
+                        ),
+                        child: Text("Logout", style: text.copyWith(fontSize: 20)),
                       ),
-                      child: Text("Confirm", style: text.copyWith(fontSize: 30)),
                     ),
+                    
+                    const SizedBox(height: 20), // FIX: Add bottom padding
                   ],
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
+    );
+  }
+
+  Widget _buildInfoRow(IconData icon, String title, String value) {
+    return Row(
+      children: [
+        Icon(icon, color: Colors.orange, size: 20),
+        const SizedBox(width: 10),
+        Text("$title: ", style: text.copyWith(fontWeight: FontWeight.bold)),
+        Text(value, style: text),
+      ],
     );
   }
 }

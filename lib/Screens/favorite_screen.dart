@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:pick_my_dish/Screens/recipe_screen.dart';
+import 'package:pick_my_dish/Screens/recipe_detail_screen.dart';
 import 'package:pick_my_dish/constants.dart';
 
 class FavoritesScreen extends StatelessWidget {
@@ -7,15 +8,24 @@ class FavoritesScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final favoriteRecipes = RecipesScreenState.allRecipes.where((recipe) => recipe['isFavorite'] == true).toList();
+    final favoriteRecipes = RecipesScreenState.allRecipes
+        .where((recipe) => recipe['isFavorite'] == true)
+        .toList();
+
+    void _showRecipeDetails(Map<String, dynamic> recipe) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => RecipeDetailScreen(recipe: recipe),
+        ),
+      );
+    }
 
     return Scaffold(
       body: Container(
         width: double.infinity,
         height: double.infinity,
-        decoration: BoxDecoration(
-          color: Colors.black
-        ),
+        decoration: BoxDecoration(color: Colors.black),
         child: Padding(
           padding: const EdgeInsets.all(30),
           child: Column(
@@ -28,27 +38,33 @@ class FavoritesScreen extends StatelessWidget {
                   Text("Favorite Recipes", style: title.copyWith(fontSize: 28)),
                   GestureDetector(
                     onTap: () => Navigator.pop(context),
-                    child: Icon(Icons.arrow_back, color: Colors.white, size: 30),
+                    child: Icon(
+                      Icons.arrow_back,
+                      color: Colors.white,
+                      size: 30,
+                    ),
                   ),
                 ],
               ),
               SizedBox(height: 30),
-              
+
               // Favorites List
               Expanded(
                 child: favoriteRecipes.isEmpty
                     ? Center(
-                        child: Text(
-                          "No favorite recipes yet",
-                          style: text,
-                        ),
+                        child: Text("No favorite recipes yet", style: text),
                       )
                     : ListView.builder(
                         itemCount: favoriteRecipes.length,
                         itemBuilder: (context, index) {
-                          return Container(
-                            margin: EdgeInsets.only(bottom: 15),
-                            child: _buildRecipeCard(favoriteRecipes[index]),
+                          return GestureDetector(
+                            onTap: () {
+                              _showRecipeDetails(favoriteRecipes[index]);
+                            },
+                            child: Container(
+                              margin: EdgeInsets.only(bottom: 15),
+                              child: _buildRecipeCard(favoriteRecipes[index]),
+                            ),
                           );
                         },
                       ),
@@ -93,7 +109,7 @@ class FavoritesScreen extends StatelessWidget {
               ),
             ),
           ),
-          
+
           // Recipe Name
           Positioned(
             left: 100,
@@ -108,7 +124,7 @@ class FavoritesScreen extends StatelessWidget {
               ),
             ),
           ),
-          
+
           // Time with Icon
           Positioned(
             right: 15,
@@ -129,16 +145,12 @@ class FavoritesScreen extends StatelessWidget {
               ],
             ),
           ),
-          
+
           // Favorite Icon (filled since it's favorites screen)
           Positioned(
             right: 10,
             top: 10,
-            child: Icon(
-              Icons.favorite,
-              color: Colors.orange,
-              size: 20,
-            ),
+            child: Icon(Icons.favorite, color: Colors.orange, size: 20),
           ),
         ],
       ),

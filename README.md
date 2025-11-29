@@ -1,4 +1,4 @@
-#pick_my_dish--.
+#pick_my_dish.
 
 
 This project is a starting point for a Flutter application.
