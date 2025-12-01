@@ -232,10 +232,13 @@ if (response != null && response['user'] != null) {
                         children: [
                           GestureDetector(
                             onTap: () {
-                              // Forgot password logic
+                              Navigator.pushReplacement(
+                              context, 
+                              MaterialPageRoute(builder: (context) => HomeScreen())
+                            );
                             },
                             child: Text(
-                              "Forgot Password? ",
+                              "Login As Guest",
                               style: footerClickable,
                             ),
                           ),

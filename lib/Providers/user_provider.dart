@@ -16,7 +16,7 @@ class UserProvider with ChangeNotifier {
   String get profilePicture => _profilePicture;
   /// Returns the username of the current user, or a default 'User' string
   /// when no user is available.
-  String get username => _user?.username ?? 'User';  
+  String get username => _user?.username ?? 'Guest';  
   int get userId => _userId;  
 
 
