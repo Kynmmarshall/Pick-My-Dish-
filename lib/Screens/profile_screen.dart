@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:pick_my_dish/Providers/user_provider.dart';
 import 'package:pick_my_dish/Screens/login_screen.dart';
 import 'package:pick_my_dish/Services/api_service.dart';
 import 'package:pick_my_dish/constants.dart';
-import 'package:pick_my_dish/utils/image_utils.dart';
+import 'package:pick_my_dish/widgets/cached_image.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 
@@ -30,16 +31,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
 }
 
   void _loadProfilePicture() async {
-  if (!mounted) return;
-  
-  final userProvider = Provider.of<UserProvider>(context, listen: false);
-  String? imagePath = await ApiService.getProfilePicture(userProvider.userId);
-  debugPrint('🖼️ Image path from server: $imagePath');
-  if (imagePath != null && mounted) {
-    userProvider.updateProfilePicture(imagePath);
-    setState(() {}); // Refresh UI
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    String? imagePath = await ApiService.getProfilePicture(userProvider.userId);
+    
+    // Check mounted BEFORE updating UI
+    if (mounted && imagePath != null) {
+      userProvider.updateProfilePicture(imagePath);
+      setState(() {});
+    }
   }
-}
 
   void _saveProfile() async {
   // Add this check first
@@ -86,49 +86,50 @@ class _ProfileScreenState extends State<ProfileScreen> {
       maxHeight: 800,
     );
     
-    if (pickedFile != null && mounted) {
-      final userProvider = Provider.of<UserProvider>(context, listen: false);
+    if (pickedFile == null) return;
+    
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    
+    bool success = await ApiService.uploadProfilePicture(
+      File(pickedFile.path),
+      userProvider.userId
+    );
+    
+    // Check mounted FIRST before using context
+    if (!mounted) return;
+    
+    if (success) {
+      // Get actual filename
+      String? actualImagePath = await ApiService.getProfilePicture(userProvider.userId);
       
-      bool success = await ApiService.uploadProfilePicture(
-        File(pickedFile.path),
-        userProvider.userId
-      );
+      // Check mounted again after async
+      if (!mounted) return;
       
-      if (success && mounted) {
-        // 1. Get the ACTUAL filename from server
-        String? actualImagePath = await ApiService.getProfilePicture(userProvider.userId);
+      if (actualImagePath != null) {
+        // Clear old cache before updating
+        final cacheManager = DefaultCacheManager();
+        await cacheManager.removeFile('http://38.242.246.126:3000/${userProvider.profilePicture}');
+        userProvider.updateProfilePicture(actualImagePath);
+        setState(() {});
         
-        if (actualImagePath != null) {
-          // 2. Use the ACTUAL path from server
-          userProvider.updateProfilePicture(actualImagePath);
-          setState(() {});
-          
+        if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Profile picture updated!', style: text),
               backgroundColor: Colors.green,
             ),
           );
-        } else {
-          // Show error if can't get path
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Updated but failed to load new image', style: text),
-              backgroundColor: Colors.orange,
-            ),
-          );
         }
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to update picture', style: text),
-            backgroundColor: Colors.red,
-          ),
-        );
       }
+    } else if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to update picture', style: text),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -171,7 +172,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       children: [
                         Consumer<UserProvider>(
                           builder: (context, userProvider, child) {
-                            return ImageUtils.profileImage(userProvider.profilePicture, 60);
+                            return CachedProfileImage(imagePath: userProvider.profilePicture,radius: 60,);
                           },
                         ),
                         Positioned(

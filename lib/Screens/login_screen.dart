@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:pick_my_dish/Models/user_model.dart';
 import 'package:pick_my_dish/Providers/user_provider.dart';
 import 'package:pick_my_dish/Services/api_service.dart';
-import 'package:pick_my_dish/Services/image_cache_service.dart';
 import 'package:pick_my_dish/constants.dart';
 import 'package:pick_my_dish/Screens/register_screen.dart';
 import 'package:pick_my_dish/Screens/home_screen.dart';
@@ -20,13 +19,6 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
-  Future<void> _cacheUserImages(Map<String, dynamic> userData) async {
-  // Just trigger NetworkImage to cache, don't await
-  if (userData['profileImage'] != null) {
-    final url = 'http://38.242.246.126:3000/${userData['profileImage']}';
-    ImageCacheService.cacheImage(url); // Fire and forget
-  }
-}
 
   void _login() async {
     if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
@@ -93,9 +85,6 @@ if (response != null && response['user'] != null) {
       userProvider.setUser(User.fromJson(response['user']));
       // Store the user ID from login response
       userProvider.setUserId(response['userId']);
-      // After getting new image path, clear old cache
-      await ImageCacheService.clearCache();
-      await _cacheUserImages(response['user']);  // Cache images after login
       
       if (context.mounted) {
         Navigator.pushReplacement(

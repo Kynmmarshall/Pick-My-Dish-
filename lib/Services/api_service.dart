@@ -2,9 +2,6 @@ import 'dart:convert';  // For JSON encoding/decoding
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:flutter/material.dart';
-import 'package:pick_my_dish/Providers/user_provider.dart';
-import 'package:provider/provider.dart';  // For HTTP requests
 
 
 class ApiService {

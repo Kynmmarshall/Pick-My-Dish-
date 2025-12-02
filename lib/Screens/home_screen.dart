@@ -12,7 +12,7 @@ import 'package:pick_my_dish/Screens/favorite_screen.dart';
 import 'package:pick_my_dish/Screens/profile_screen.dart';
 import 'package:pick_my_dish/Screens/recipe_screen.dart';
 import 'package:dropdown_search/dropdown_search.dart';
-import 'package:pick_my_dish/utils/image_utils.dart';
+import 'package:pick_my_dish/widgets/cached_image.dart';
 import 'package:provider/provider.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -637,7 +637,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   children: [
                     Consumer<UserProvider>(
                     builder: (context, userProvider, child) {
-                      return ImageUtils.profileImage(userProvider.profilePicture, 60);
+                      return CachedProfileImage(imagePath: userProvider.profilePicture,radius: 60);
                     },
                   ),
                     const SizedBox(width: 25),
