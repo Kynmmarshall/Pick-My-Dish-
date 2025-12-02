@@ -21,13 +21,11 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _passwordController = TextEditingController();
 
   Future<void> _cacheUserImages(Map<String, dynamic> userData) async {
-  // Cache profile picture
+  // Just trigger NetworkImage to cache, don't await
   if (userData['profileImage'] != null) {
-    final imageUrl = 'http://38.242.246.126:3000/${userData['profileImage']}';
-    await ImageCacheService.cacheNetworkImage(imageUrl);
+    final url = 'http://38.242.246.126:3000/${userData['profileImage']}';
+    ImageCacheService.cacheImage(url); // Fire and forget
   }
-  
-  // Cache any other user images here
 }
 
   void _login() async {

@@ -4,7 +4,6 @@ import 'package:image_picker/image_picker.dart';
 import 'package:pick_my_dish/Providers/user_provider.dart';
 import 'package:pick_my_dish/Screens/login_screen.dart';
 import 'package:pick_my_dish/Services/api_service.dart';
-import 'package:pick_my_dish/Services/image_cache_service.dart';
 import 'package:pick_my_dish/constants.dart';
 import 'package:pick_my_dish/utils/image_utils.dart';
 import 'package:provider/provider.dart';
@@ -80,53 +79,56 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void _pickImage() async {
-  final picker = ImagePicker();
-  final pickedFile = await picker.pickImage(source: ImageSource.gallery);
-  
-  if (pickedFile != null) {
-    if (!mounted) return;
-    
-    final userProvider = Provider.of<UserProvider>(context, listen: false);
-    
-    bool success = await ApiService.uploadProfilePicture(
-      File(pickedFile.path),
-      userProvider.userId
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 800,
+      maxHeight: 800,
     );
     
-    if (!mounted) return;
-    
-    if (success) {
-      // 1. First, get the NEW image path from server
-      String? newImagePath = await ApiService.getProfilePicture(userProvider.userId);
-      await ImageCacheService.clearCache();
-      if (newImagePath != null && mounted) {
-        // 2. Cache the new image immediately
-        final serverUrl = 'http://38.242.246.126:3000/$newImagePath';
-        await ImageCacheService.cacheNetworkImage(serverUrl);
+    if (pickedFile != null && mounted) {
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
+      
+      bool success = await ApiService.uploadProfilePicture(
+        File(pickedFile.path),
+        userProvider.userId
+      );
+      
+      if (success && mounted) {
+        // 1. Get the ACTUAL filename from server
+        String? actualImagePath = await ApiService.getProfilePicture(userProvider.userId);
         
-        // 3. Update provider with new path
-        userProvider.updateProfilePicture(newImagePath);
-        
-        // 4. Force UI refresh
-        setState(() {});
-        
+        if (actualImagePath != null) {
+          // 2. Use the ACTUAL path from server
+          userProvider.updateProfilePicture(actualImagePath);
+          setState(() {});
+          
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Profile picture updated!', style: text),
+              backgroundColor: Colors.green,
+            ),
+          );
+        } else {
+          // Show error if can't get path
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Updated but failed to load new image', style: text),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+      } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Profile picture updated!', style: text),
-            backgroundColor: Colors.green,
+            content: Text('Failed to update picture', style: text),
+            backgroundColor: Colors.red,
           ),
         );
       }
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to update picture', style: text),
-          backgroundColor: Colors.red,
-        ),
-      );
     }
   }
-}
+
 
   @override
   Widget build(BuildContext context) {
@@ -169,10 +171,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       children: [
                         Consumer<UserProvider>(
                           builder: (context, userProvider, child) {
-                            return ImageUtils.buildCachedProfileImage(
-                              userProvider.profilePicture,
-                              60
-                            );
+                            return ImageUtils.profileImage(userProvider.profilePicture, 60);
                           },
                         ),
                         Positioned(

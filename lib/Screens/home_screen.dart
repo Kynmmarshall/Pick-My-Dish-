@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:pick_my_dish/Providers/user_provider.dart';
 import 'package:pick_my_dish/Screens/login_screen.dart';
 import 'package:pick_my_dish/Screens/recipe_detail_screen.dart';
+import 'package:pick_my_dish/Services/api_service.dart';
 import 'package:pick_my_dish/constants.dart';
 import 'package:pick_my_dish/services/database_service.dart';
 import 'package:pick_my_dish/Screens/favorite_screen.dart';
@@ -581,6 +582,15 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildSideMenu() {
+    // Load profile picture when menu opens
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
+      String? imagePath = await ApiService.getProfilePicture(userProvider.userId);
+      if (imagePath != null) {
+        userProvider.updateProfilePicture(imagePath);
+      }
+    });
+
     return Container(
       width: MediaQuery.of(context).size.width * 0.9,
       decoration: BoxDecoration(
@@ -627,10 +637,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   children: [
                     Consumer<UserProvider>(
                     builder: (context, userProvider, child) {
-                      return ImageUtils.buildCachedProfileImage(
-                        userProvider.profilePicture,
-                        60
-                      );
+                      return ImageUtils.profileImage(userProvider.profilePicture, 60);
                     },
                   ),
                     const SizedBox(width: 25),
