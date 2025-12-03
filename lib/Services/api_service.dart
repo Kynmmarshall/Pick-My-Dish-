@@ -164,18 +164,24 @@ static Future<String?> getProfilePicture(int userId) async {
 
 // Get all recipes
 static Future<List<Map<String, dynamic>>> getRecipes() async {
-    try {
-      final response = await http.get(Uri.parse('$baseUrl/api/recipes'));
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        return List<Map<String, dynamic>>.from(data['recipes']);
-      }
-      return [];
-    } catch (e) {
-      debugPrint('❌ Error fetching recipes: $e');
+  try {
+    final response = await http.get(
+      Uri.parse('$baseUrl/api/recipes'),
+      headers: {'Content-Type': 'application/json'},
+    );
+    
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      return List<Map<String, dynamic>>.from(data['recipes'] ?? []);
+    } else {
+      print('❌ Failed to fetch recipes: ${response.statusCode}');
       return [];
     }
+  } catch (e) {
+    print('❌ Error fetching recipes: $e');
+    return [];
   }
+}
   
 // Upload recipe with image
 static Future<bool> uploadRecipe(Map<String, dynamic> recipeData, File? imageFile) async {

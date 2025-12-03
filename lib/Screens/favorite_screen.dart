@@ -1,17 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:pick_my_dish/Providers/favorite_provider.dart';
 import 'package:pick_my_dish/Screens/recipe_screen.dart';
 import 'package:pick_my_dish/Screens/recipe_detail_screen.dart';
 import 'package:pick_my_dish/constants.dart';
+import 'package:provider/provider.dart';
 
 class FavoritesScreen extends StatelessWidget {
   const FavoritesScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final favoriteRecipes = RecipesScreenState.allRecipes
-        .where((recipe) => recipe['isFavorite'] == true)
-        .toList();
-
+    final favoritesProvider = Provider.of<FavoriteProvider>(context);
+    final recipesScreenState = context.findAncestorStateOfType<RecipesScreenState>();
+    
+    final favoriteRecipes = recipesScreenState?.allRecipes
+        .where((recipe) => favoritesProvider.isFavorite(recipe['id']))
+        .toList() ?? [];
     void _showRecipeDetails(Map<String, dynamic> recipe) {
       Navigator.push(
         context,

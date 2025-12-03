@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:pick_my_dish/Providers/user_provider.dart';
 import 'package:pick_my_dish/Screens/login_screen.dart';
 import 'package:pick_my_dish/Screens/recipe_detail_screen.dart';
+import 'package:pick_my_dish/Screens/recipe_upload_screen.dart';
 import 'package:pick_my_dish/Services/api_service.dart';
 import 'package:pick_my_dish/constants.dart';
 import 'package:pick_my_dish/services/database_service.dart';
@@ -216,7 +217,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       key: _scaffoldKey,
       drawer: _buildSideMenu(),
-      appBar: AppBar(
+       appBar: AppBar(
         backgroundColor: Colors.black,
         elevation: 0,
         leading: Padding(
@@ -232,6 +233,51 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
         ),
+        // Add actions (right side buttons)
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(top: 30, right: 20),
+            child: Row(
+              children: [
+                // Add Recipe Icon
+                GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const RecipeUploadScreen(),
+                      ),
+                    );
+                  },
+                  child: Image.asset(
+                    'assets/icons/add.png', // You'll need to add this icon
+                    width: 24,
+                    height: 24,
+                  ),
+                ),
+                const SizedBox(width: 20),
+                
+                // Favorites Icon
+                GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const FavoritesScreen(),
+                      ),
+                    );
+                  },
+                  child: Image.asset(
+                    'assets/icons/heart.png', // You'll need to add this icon
+                    width: 24,
+                    height: 24,
+                  ),
+                ),
+                const SizedBox(width: 10), // Adjust spacing
+              ],
+            ),
+          ),
+        ],
       ),
 
       body: Container(

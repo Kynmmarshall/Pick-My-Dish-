@@ -3,6 +3,17 @@ import 'package:provider/provider.dart';
 import 'package:pick_my_dish/Providers/user_provider.dart';
 import 'package:pick_my_dish/Screens/recipe_screen.dart';
 
+class FakeFavoriteProvider extends ChangeNotifier {
+  List<dynamic> favorites = [];
+  List<int> favoriteIds = [];
+  
+  bool isFavorite(dynamic recipe) => false;
+  
+  Future<void> toggleFavorite(dynamic recipe) async {}
+  
+  Future<void> loadFavorites() async {}
+}
+
 // Helper to create test recipes
 List<Map<String, dynamic>> createTestRecipes({int count = 5}) {
   return List.generate(count, (index) => {
@@ -12,13 +23,6 @@ List<Map<String, dynamic>> createTestRecipes({int count = 5}) {
     'isFavorite': false,
     'image': 'assets/recipes/test.png',
     'calories': '${1000 + index}'
-  });
-}
-
-// Helper to reset recipe favorites
-void resetRecipeFavorites() {
-  RecipesScreenState.allRecipes.forEach((recipe) {
-    recipe['isFavorite'] = false;
   });
 }
 

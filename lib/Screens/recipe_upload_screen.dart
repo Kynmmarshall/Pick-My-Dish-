@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:pick_my_dish/Providers/user_provider.dart';
+import 'package:pick_my_dish/Services/api_service.dart';
 import 'package:pick_my_dish/constants.dart';
 import 'dart:io';
+
+import 'package:provider/provider.dart';
 
 class RecipeUploadScreen extends StatefulWidget {
   const RecipeUploadScreen({super.key});
@@ -46,50 +50,52 @@ class _RecipeUploadScreenState extends State<RecipeUploadScreen> {
     });
   }
 
-  void _uploadRecipe() {
-    // Validate required fields
-    if (_nameController.text.isEmpty || 
-        _timeController.text.isEmpty ||
-        _caloriesController.text.isEmpty ||
-        _ingredientsController.text.isEmpty ||
-        _stepsController.text.isEmpty ||
-        _selectedImage == null ||
-        _selectedEmotions.isEmpty) {
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Please fill all required fields', style: text),
-          backgroundColor: Colors.orange,
-        ),
-      );
-      return;
-    }
-
-    // TODO: Upload to backend
-    final recipeData = {
-      'name': _nameController.text,
-      'time': _timeController.text,
-      'calories': _caloriesController.text,
-      'ingredients': _ingredientsController.text,
-      'steps': _stepsController.text,
-      'emotions': _selectedEmotions,
-      'image': _selectedImage!.path,
-    };
-
-    print('Recipe to upload: $recipeData');
-    
-    // Show success message
+  void _uploadRecipe() async {
+  // Validate
+  if (_nameController.text.isEmpty || _selectedImage == null) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Recipe uploaded successfully!', style: text),
-        backgroundColor: Colors.green,
-      ),
+      SnackBar(content: Text('Please fill required fields')),
     );
-    
-    // Navigate back
-    Navigator.pop(context);
+    return;
   }
-
+  
+  final userProvider = Provider.of<UserProvider>(context, listen: false);
+  
+  final recipeData = {
+    'name': _nameController.text,
+    'category': 'Main Course', // Add category dropdown
+    'time': _timeController.text,
+    'calories': _caloriesController.text,
+    'ingredients': _ingredientsController.text.split('\n'),
+    'instructions': _stepsController.text.split('\n'),
+    'userId': userProvider.userId,
+  };
+  
+  // Show loading
+  showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (context) => Center(child: CircularProgressIndicator()),
+  );
+  
+  try {
+    bool success = await ApiService.uploadRecipe(recipeData, _selectedImage);
+    
+    Navigator.pop(context); // Hide loading
+    
+    if (success && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Recipe uploaded successfully!')),
+      );
+      Navigator.pop(context); // Go back
+    }
+  } catch (e) {
+    Navigator.pop(context);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Upload failed: $e')),
+    );
+  }
+}
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -206,11 +212,11 @@ class _RecipeUploadScreenState extends State<RecipeUploadScreen> {
               label: Text(emotion, style: text),
               selected: isSelected,
               onSelected: (_) => _toggleEmotion(emotion),
-              backgroundColor: Colors.white.withOpacity(0.1),
+              backgroundColor: const Color.fromARGB(255, 46, 32, 3).withOpacity(0.3),
               selectedColor: Colors.orange,
               checkmarkColor: Colors.white,
               labelStyle: text.copyWith(
-                color: isSelected ? Colors.white : Colors.white,
+                color: isSelected ? const Color.fromARGB(255, 31, 30, 30) : Colors.white,
               ),
             );
           }).toList(),

@@ -5,66 +5,89 @@ class CachedProfileImage extends StatelessWidget {
   final String imagePath;
   final double radius;
   final bool isProfilePicture;
+  final double? width;
+  final double? height;
+  final BoxFit fit;
 
   const CachedProfileImage({
     Key? key,
     required this.imagePath,
     this.radius = 60,
     this.isProfilePicture = true,
+    this.width,
+    this.height,
+    this.fit = BoxFit.cover,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    // Check if it's a server image
-    if (imagePath.startsWith('uploads/')) {
+    String fullPath = imagePath;
+    
+    // Check if it's a server path
+    if (imagePath.startsWith('assets/')) {
+      // Local asset
+      return isProfilePicture
+          ? CircleAvatar(
+              radius: radius,
+              backgroundImage: AssetImage(imagePath),
+            )
+          : Image.asset(
+              imagePath,
+              width: width,
+              height: height,
+              fit: fit,
+            );
+    } else {
+      // Server image
       final url = 'http://38.242.246.126:3000/$imagePath';
       
       return CachedNetworkImage(
         imageUrl: url,
-        imageBuilder: (context, imageProvider) => _buildImage(imageProvider),
+        imageBuilder: (context, imageProvider) {
+          return isProfilePicture
+              ? CircleAvatar(
+                  radius: radius,
+                  backgroundImage: imageProvider,
+                )
+              : Container(
+                  width: width,
+                  height: height,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(isProfilePicture ? radius : 10),
+                    image: DecorationImage(
+                      image: imageProvider,
+                      fit: fit,
+                    ),
+                  ),
+                );
+        },
         placeholder: (context, url) => _buildPlaceholder(),
         errorWidget: (context, url, error) => _buildErrorWidget(),
-        cacheKey: imagePath, // Use path as cache key
-        maxWidthDiskCache: 400, // Cache smaller version
-        maxHeightDiskCache: 400,
-      );
-    } else {
-      // Local asset
-      return _buildImage(AssetImage(imagePath));
-    }
-  }
-
-  Widget _buildImage(ImageProvider imageProvider) {
-    if (isProfilePicture) {
-      return CircleAvatar(
-        radius: radius,
-        backgroundImage: imageProvider,
-      );
-    } else {
-      return Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(10),
-          image: DecorationImage(
-            image: imageProvider,
-            fit: BoxFit.cover,
-          ),
-        ),
       );
     }
   }
-
+  
   Widget _buildPlaceholder() {
-    return CircleAvatar(
-      radius: radius,
-      backgroundColor: Colors.grey[800],
-      child: CircularProgressIndicator(color: Colors.orange),
+    return Container(
+      width: isProfilePicture ? radius * 2 : width,
+      height: isProfilePicture ? radius * 2 : height,
+      decoration: BoxDecoration(
+        color: Colors.grey[800],
+        borderRadius: BorderRadius.circular(isProfilePicture ? radius : 10),
+      ),
+      child: Center(child: CircularProgressIndicator(color: Colors.orange)),
     );
   }
-
+  
   Widget _buildErrorWidget() {
-    return CircleAvatar(
-      radius: radius,
-      backgroundImage: AssetImage('assets/login/noPicture.png'),
+    return Container(
+      width: isProfilePicture ? radius * 2 : width,
+      height: isProfilePicture ? radius * 2 : height,
+      decoration: BoxDecoration(
+        color: Colors.grey[800],
+        borderRadius: BorderRadius.circular(isProfilePicture ? radius : 10),
+      ),
+      child: Icon(Icons.broken_image, color: Colors.white),
     );
   }
 }
