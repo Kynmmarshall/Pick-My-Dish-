@@ -104,7 +104,7 @@ class _RecipeUploadScreenState extends State<RecipeUploadScreen> {
         backgroundColor: Colors.black,
         title: Text('Upload Recipe', style: title),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.orange),
+          icon: const Icon(Icons.arrow_back, color: Colors.orange), iconSize: iconSize,
           onPressed: () => Navigator.pop(context),
         ),
       ),

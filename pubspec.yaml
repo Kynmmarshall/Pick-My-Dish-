@@ -76,7 +76,6 @@ flutter:
   assets:
    - assets/logo/
    - assets/login/
-   - assets/icons/
    - assets/sideMenu/
    - assets/recipes/
    

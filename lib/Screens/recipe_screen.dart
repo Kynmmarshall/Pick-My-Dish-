@@ -82,9 +82,13 @@ class RecipesScreenState extends State<RecipesScreen> {
       appBar: AppBar(
         backgroundColor: Colors.black,
         elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.orange), iconSize: iconSize,
+          onPressed: () => Navigator.pop(context),
+        ),
         actions: [
           Padding(
-            padding: const EdgeInsets.only(top: 30, right: 20),
+            padding: const EdgeInsets.only(top: 10, right: 20),
             child: Row(
               children: [
                 // Add Recipe Button
@@ -97,13 +101,13 @@ class RecipesScreenState extends State<RecipesScreen> {
                       ),
                     );
                   },
-                  child: Image.asset(
-                    'assets/icons/add.png',
-                    width: 24,
-                    height: 24,
+                  child: const Icon(
+                    Icons.add_circle,
+                    color: Colors.orange,
+                    size: iconSize,
                   ),
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: 20),
 
                 // Favorites Icon
                 GestureDetector(
@@ -115,10 +119,10 @@ class RecipesScreenState extends State<RecipesScreen> {
                       ),
                     );
                   },
-                  child: Image.asset(
-                    'assets/icons/heart.png', // You'll need to add this icon
-                    width: 24,
-                    height: 24,
+                  child: const Icon(
+                    Icons.favorite_outlined,
+                    color: Colors.orange,
+                    size: iconSize,
                   ),
                 ),
                 const SizedBox(width: 10), // Adjust spacing
@@ -135,20 +139,11 @@ class RecipesScreenState extends State<RecipesScreen> {
           padding: const EdgeInsets.all(30),
           child: Column(
             children: [
-              SizedBox(height: 50),
               // Header with title and back button
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text("All Recipes", style: title.copyWith(fontSize: 28)),
-                  GestureDetector(
-                    onTap: () => Navigator.pop(context),
-                    child: Icon(
-                      Icons.arrow_back,
-                      color: Colors.orange,
-                      size: iconSize,
-                    ),
-                  ),
                 ],
               ),
               SizedBox(height: 20),
