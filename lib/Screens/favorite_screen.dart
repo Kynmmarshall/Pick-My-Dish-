@@ -3,6 +3,7 @@ import 'package:pick_my_dish/Models/recipe_model.dart';
 import 'package:pick_my_dish/Providers/recipe_provider.dart';
 import 'package:pick_my_dish/Screens/recipe_detail_screen.dart';
 import 'package:pick_my_dish/constants.dart';
+import 'package:pick_my_dish/widgets/cached_image.dart';
 import 'package:provider/provider.dart';
 
 class FavoritesScreen extends StatelessWidget {
@@ -99,17 +100,17 @@ class FavoritesScreen extends StatelessWidget {
             left: 4,
             top: 5,
             child: Container(
-              width: 66,
-              height: 54,
-              decoration: BoxDecoration(
-                color: Colors.grey,
-                borderRadius: BorderRadius.circular(10),
-                image: DecorationImage(
-                  image: AssetImage(recipe.imagePath), // Use Recipe model property
+                width: 99,
+                height: 87,
+                child: CachedProfileImage(
+                  imagePath: recipe.imagePath, // Use Recipe property
+                  radius: 0,
+                  isProfilePicture: false,
+                  width: 99,
+                  height: 87,
                   fit: BoxFit.cover,
                 ),
               ),
-            ),
           ),
 
           // Recipe Name

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:pick_my_dish/Models/recipe_model.dart';
 import 'package:pick_my_dish/constants.dart';
+import 'package:pick_my_dish/widgets/cached_image.dart';
 
 class RecipeDetailScreen extends StatelessWidget {
   final Recipe recipe;
@@ -18,10 +19,14 @@ class RecipeDetailScreen extends StatelessWidget {
             expandedHeight: 300,
             stretch: true,
             flexibleSpace: FlexibleSpaceBar(
-              background: Image.asset(
-                recipe.imagePath,
-                fit: BoxFit.cover,
-              ),
+              background: CachedProfileImage(
+                  imagePath: recipe.imagePath, // Use Recipe property
+                  radius: 0,
+                  isProfilePicture: false,
+                  width: 99,
+                  height: 87,
+                  fit: BoxFit.cover,
+                ),
             ),
             backgroundColor: Colors.black,
             leading: Padding(
