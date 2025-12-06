@@ -18,7 +18,7 @@ class FavoritesScreen extends StatelessWidget {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => RecipeDetailScreen(recipe: recipe), // Convert to Map for compatibility
+          builder: (context) => RecipeDetailScreen(initialRecipe: recipe), // Convert to Map for compatibility
         ),
       );
     }

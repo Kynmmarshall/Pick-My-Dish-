@@ -166,7 +166,7 @@ static Future<String?> getProfilePicture(int userId) async {
 static Future<List<Map<String, dynamic>>> getRecipes() async {
   try {
     final response = await http.get(
-      Uri.parse('$baseUrl/api/recipes'),
+      Uri.parse('$baseUrl/api/recipes/with-category'),
       headers: {'Content-Type': 'application/json'},
     );
     

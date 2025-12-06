@@ -44,15 +44,15 @@ class Recipe {
   return Recipe(
     id: json['id'] ?? 0,
     name: json['name'] ?? '',
-    category: json['category'] ?? 'Main Course',
+    category: json['category'] ?? 'Uncategorized',
     cookingTime: json['time'] ?? json['cooking_time'] ?? '0 mins',
     calories: json['calories']?.toString() ?? '0',
     imagePath: json['image_path'] ?? json['image'] ?? 'assets/recipes/test.png',
     ingredients: parseList(json['ingredients']),
-    steps: parseList(json['instructions'] ?? json['steps']),
+    steps: parseList(json['steps']),
     moods: parseList(json['mood'] ?? json['emotions']),
-    userId: json['userId'] ?? 0,
-    isFavorite: json['isFavorite'] == true,
+    userId: json['user_id'] ?? 0,
+    isFavorite: json['isFavorite'] ?? false,
   );
 }
   Recipe copyWith({

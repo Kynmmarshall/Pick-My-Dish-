@@ -1,12 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:pick_my_dish/Models/recipe_model.dart';
+import 'package:pick_my_dish/Providers/recipe_provider.dart';
 import 'package:pick_my_dish/constants.dart';
 import 'package:pick_my_dish/widgets/cached_image.dart';
+import 'package:provider/provider.dart';
 
-class RecipeDetailScreen extends StatelessWidget {
-  final Recipe recipe;
+class RecipeDetailScreen extends StatefulWidget {
+  final Recipe initialRecipe;
 
-  const RecipeDetailScreen({super.key, required this.recipe});
+  const RecipeDetailScreen({super.key, required this.initialRecipe});
+  
+  @override
+  State<RecipeDetailScreen> createState() => _RecipeDetailScreenState();
+}
+
+class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
+  late Recipe recipe;
+
+  @override
+  void initState() {
+    super.initState();
+    recipe = widget.initialRecipe;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -20,13 +35,13 @@ class RecipeDetailScreen extends StatelessWidget {
             stretch: true,
             flexibleSpace: FlexibleSpaceBar(
               background: CachedProfileImage(
-                  imagePath: recipe.imagePath, // Use Recipe property
-                  radius: 0,
-                  isProfilePicture: false,
-                  width: 99,
-                  height: 87,
-                  fit: BoxFit.cover,
-                ),
+                imagePath: recipe.imagePath,
+                radius: 0,
+                isProfilePicture: false,
+                width: double.infinity,
+                height: 300,
+                fit: BoxFit.cover,
+              ),
             ),
             backgroundColor: Colors.black,
             leading: Padding(
@@ -41,12 +56,17 @@ class RecipeDetailScreen extends StatelessWidget {
                 padding: const EdgeInsets.only(top: 20, right: 20),
                 child: IconButton(
                   icon: Icon(
-                    recipe.isFavorite == true ? Icons.favorite : Icons.favorite_border,
+                    recipe.isFavorite ? Icons.favorite : Icons.favorite_border,
                     color: Colors.orange,
                     size: 30,
                   ),
                   onPressed: () {
-                    // Toggle favorite logic
+                    final recipeProvider = Provider.of<RecipeProvider>(context, listen: false);
+                    recipeProvider.toggleFavorite(recipe.id);
+                    
+                    setState(() {
+                      recipe = recipe.copyWith(isFavorite: !recipe.isFavorite);
+                    });
                   },
                 ),
               ),
@@ -145,23 +165,23 @@ class RecipeDetailScreen extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                          ...List<String>.from(recipe.ingredients).map(
-                            (ingredient) => Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 8),
-                              child: Row(
-                                children: [
-                                  const Icon(Icons.circle, color: Colors.orange, size: 8),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Text(
-                                      ingredient,
-                                      style: text.copyWith(fontSize: 16),
-                                    ),
+                        ...recipe.ingredients.map(
+                          (ingredient) => Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.circle, color: Colors.orange, size: 8),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    ingredient,
+                                    style: text.copyWith(fontSize: 16),
                                   ),
-                                ],
-                              ),
+                                ),
+                              ],
                             ),
-                          ).toList(),
+                          ),
+                        ).toList(),
                       ],
                     ),
                   ),
@@ -182,41 +202,41 @@ class RecipeDetailScreen extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                          ...List<String>.from(recipe.steps).asMap().entries.map(
-                            (entry) => Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Container(
-                                    width: 30,
-                                    height: 30,
-                                    decoration: BoxDecoration(
-                                      color: Colors.orange,
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: Center(
-                                      child: Text(
-                                        '${entry.key + 1}',
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 14,
-                                        ),
+                        ...recipe.steps.asMap().entries.map(
+                          (entry) => Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Container(
+                                  width: 30,
+                                  height: 30,
+                                  decoration: BoxDecoration(
+                                    color: Colors.orange,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      '${entry.key + 1}',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
                                       ),
                                     ),
                                   ),
-                                  const SizedBox(width: 15),
-                                  Expanded(
-                                    child: Text(
-                                      entry.value,
-                                      style: text.copyWith(fontSize: 16),
-                                    ),
+                                ),
+                                const SizedBox(width: 15),
+                                Expanded(
+                                  child: Text(
+                                    entry.value,
+                                    style: text.copyWith(fontSize: 16),
                                   ),
-                                ],
-                              ),
+                                ),
+                              ],
                             ),
-                          ).toList(),
+                          ),
+                        ).toList(),
                       ],
                     ),
                   ),
@@ -224,13 +244,13 @@ class RecipeDetailScreen extends StatelessWidget {
                   const SizedBox(height: 30),
 
                   // Mood Tags
-                   ...[
+                  if (recipe.moods.isNotEmpty) ...[
                     Text("Perfect For", style: mediumtitle),
                     const SizedBox(height: 15),
                     Wrap(
                       spacing: 10,
                       runSpacing: 10,
-                      children: List<String>.from(recipe.moods).map(
+                      children: recipe.moods.map(
                         (mood) => Container(
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                           decoration: BoxDecoration(
@@ -257,7 +277,6 @@ class RecipeDetailScreen extends StatelessWidget {
                     width: double.infinity,
                     child: ElevatedButton(
                       onPressed: () {
-                        // Start cooking logic
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             content: Text('Happy cooking! 🍳', style: text),
