@@ -77,7 +77,7 @@ static Future<bool> register(String userName, String email, String password) asy
     }
   }
 
-  static Future<void> testAuth() async {
+static Future<void> testAuth() async {
   debugPrint('🔐 Testing authentication...');
   
   // Test Registration
@@ -213,4 +213,38 @@ static Future<bool> uploadRecipe(Map<String, dynamic> recipeData, File? imageFil
       return false;
     }
   }
+
+//method to get ingredients
+static Future<List<Map<String, dynamic>>> getIngredients() async {
+  try {
+    final response = await http.get(
+      Uri.parse('$baseUrl/api/ingredients'),
+      headers: {'Content-Type': 'application/json'},
+    );
+    
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      return List<Map<String, dynamic>>.from(data['ingredients'] ?? []);
+    }
+    return [];
+  } catch (e) {
+    print('❌ Error getting ingredients: $e');
+    return [];
+  }
+}
+
+//method to create new ingredient
+static Future<bool> addIngredient(String name) async {
+  try {
+    final response = await http.post(
+      Uri.parse('$baseUrl/api/ingredients'),
+      body: json.encode({'name': name}),
+      headers: {'Content-Type': 'application/json'},
+    );
+    return response.statusCode == 201;
+  } catch (e) {
+    print('❌ Error adding ingredient: $e');
+    return false;
+  }
+}
 }

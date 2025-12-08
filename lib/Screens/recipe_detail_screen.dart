@@ -147,7 +147,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                         const Icon(Icons.local_fire_department, color: Colors.orange, size: 20),
                         const SizedBox(width: 8),
                         Text(
-                          '${recipe.calories} Calories',
+                          '${recipe.calories} KCAL',
                           style: mediumtitle.copyWith(fontSize: 18),
                         ),
                       ],

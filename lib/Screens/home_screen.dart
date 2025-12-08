@@ -15,6 +15,7 @@ import 'package:pick_my_dish/Screens/profile_screen.dart';
 import 'package:pick_my_dish/Screens/recipe_screen.dart';
 import 'package:dropdown_search/dropdown_search.dart';
 import 'package:pick_my_dish/widgets/cached_image.dart';
+import 'package:pick_my_dish/widgets/ingredient_Selector.dart';
 import 'package:provider/provider.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -27,6 +28,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   String? selectedEmotion;
   List<String> selectedIngredients = [];
+  List<int> selectedIngredientIds = [];
   String? selectedTime;
 
   List<String> emotions = [
@@ -38,24 +40,8 @@ class _HomeScreenState extends State<HomeScreen> {
     'Quick',
     'Light',
   ];
-  List<String> ingredients = [
-    'Eggs',
-    'Flour',
-    'Chicken',
-    'Vegetables',
-    'Rice',
-    'Pasta',
-    'Cheese',
-    'Milk',
-    'Bread',
-    'Avocado',
-    'Berries',
-    'Yogurt',
-    'Bacon',
-    'Lettuce',
-    'Tomato',
-  ];
   List<String> timeOptions = ['15 mins', '30 mins', '1 hour', '2+ hours'];
+  List<Map<String, dynamic>> allIngredients = [];
 
   final DatabaseService _databaseService = DatabaseService();
   List<Recipe> personalizedRecipes = [];
@@ -152,6 +138,14 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
     );
+  }
+
+  String _getIngredientName(int id) {
+    final ingredient = allIngredients.firstWhere(
+      (ing) => ing['id'] == id,
+      orElse: () => {'name': 'Unknown'},
+    );
+    return ingredient['name'];
   }
 
   Widget _buildPersonalizedRecipeCard(Recipe recipe) {
@@ -476,39 +470,32 @@ class _HomeScreenState extends State<HomeScreen> {
           const SizedBox(height: 15),
 
           // Ingredients Selection
-          DropdownSearch<String>.multiSelection(
-            items: ingredients,
-            popupProps: PopupPropsMultiSelection.menu(
-              showSearchBox: true,
-              searchFieldProps: TextFieldProps(
-                decoration: InputDecoration(
-                  hintText: "Search ingredients...",
-                  hintStyle: const TextStyle(color: Colors.white70),
-                  filled: true,
-                  fillColor: Colors.grey[900],
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                "Select Ingredients",
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
-              menuProps: MenuProps(
-                backgroundColor: const Color.fromARGB(255, 237, 229, 229),
+              const SizedBox(height: 8),
+              IngredientSelector(
+                selectedIds: selectedIngredientIds, // Use the new variable
+                onSelectionChanged: (List<int> ids) {
+                  setState(() {
+                    selectedIngredientIds = ids;
+                    // Convert IDs to names for your existing filtering logic
+                    selectedIngredients = ids.map((id) => _getIngredientName(id)).toList();
+                  });
+                },
+                hintText: "Search ingredients...",
+                allowAddingNew: false,
               ),
-            ),
-            onChanged: (List<String>? selectedItems) {
-              setState(() {
-                selectedIngredients = selectedItems ?? [];
-              });
-            },
-            selectedItems: selectedIngredients,
-            dropdownDecoratorProps: DropDownDecoratorProps(
-              dropdownSearchDecoration: InputDecoration(
-                hintText: "Select ingredients",
-                hintStyle: const TextStyle(color: Colors.white70),
-                border: const OutlineInputBorder(),
-                filled: true,
-                fillColor: Colors.black.withOpacity(0.3),
-              ),
-            ),
+            ],
           ),
-
           const SizedBox(height: 15),
 
           // Time Selection

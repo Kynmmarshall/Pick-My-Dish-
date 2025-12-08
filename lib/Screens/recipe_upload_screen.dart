@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:pick_my_dish/Providers/user_provider.dart';
 import 'package:pick_my_dish/Services/api_service.dart';
 import 'package:pick_my_dish/constants.dart';
+import 'package:pick_my_dish/widgets/ingredient_Selector.dart';
 import 'dart:io';
 
 import 'package:provider/provider.dart';
@@ -15,15 +17,26 @@ class RecipeUploadScreen extends StatefulWidget {
 }
 
 class _RecipeUploadScreenState extends State<RecipeUploadScreen> {
-  final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _timeController = TextEditingController();
-  final TextEditingController _caloriesController = TextEditingController();
+  final TextEditingController _nameController = TextEditingController();  final TextEditingController _caloriesController = TextEditingController();
   final TextEditingController _ingredientsController = TextEditingController();
   final TextEditingController _stepsController = TextEditingController();
   
   File? _selectedImage;
   final List<String> _selectedEmotions = [];
+  String _selectedTime = '30 mins';
+
+  final List<String> _timeOptions = [
+    '15 mins',
+    '30 mins', 
+    '45 mins',
+    '1 hour',
+    '1 hour 15 mins',
+    '1 hour 30 mins',
+    '2+ hours'
+  ];
   
+  List<int> _selectedIngredientIds = [];
+
   final List<String> _emotions = [
     'Happy', 'Sad', 'Energetic', 'Comfort', 
     'Healthy', 'Quick', 'Light'
@@ -63,12 +76,13 @@ class _RecipeUploadScreenState extends State<RecipeUploadScreen> {
   
   final recipeData = {
     'name': _nameController.text,
-    'category': 'Main Course', // Add category dropdown
-    'time': _timeController.text,
+    'category': 'Uncategorised', // Add category dropdown
+    'time': _selectedTime,
     'calories': _caloriesController.text,
-    'ingredients': _ingredientsController.text.split('\n'),
+    'ingredients': _selectedIngredientIds,
     'instructions': _stepsController.text.split('\n'),
     'userId': userProvider.userId,
+    'moods': _selectedEmotions, 
   };
   
   // Show loading
@@ -96,6 +110,7 @@ class _RecipeUploadScreenState extends State<RecipeUploadScreen> {
     );
   }
 }
+  
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -124,12 +139,10 @@ class _RecipeUploadScreenState extends State<RecipeUploadScreen> {
             // Cooking Time & Calories
             Row(
               children: [
-                Expanded(
-                  child: _buildTextField('Cooking Time (e.g., 30 mins)', _timeController),
-                ),
+                Expanded(child: _buildTimeDropdown()),
                 const SizedBox(width: 10),
                 Expanded(
-                  child: _buildTextField('Calories', _caloriesController),
+                  child: _buildNumberField('KiloCalories', _caloriesController),
                 ),
               ],
             ),
@@ -140,7 +153,7 @@ class _RecipeUploadScreenState extends State<RecipeUploadScreen> {
             const SizedBox(height: 15),
             
             // Ingredients
-            _buildTextArea('Ingredients (one per line)', _ingredientsController),
+            _buildIngredientsSection(),
             const SizedBox(height: 15),
             
             // Cooking Steps
@@ -277,4 +290,85 @@ class _RecipeUploadScreenState extends State<RecipeUploadScreen> {
       ],
     );
   }
+
+  Widget _buildTimeDropdown() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Cooking Time', style: mediumtitle,),
+        const SizedBox(height: 10),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          decoration: BoxDecoration(
+            border: Border.all(color: Colors.orange),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: _selectedTime,
+              isExpanded: true,
+              dropdownColor: Colors.grey[900],
+              style: text,
+              icon: Icon(Icons.arrow_drop_down, color: Colors.orange),
+              items: _timeOptions.map((String time) {
+                return DropdownMenuItem<String>(
+                  value: time,
+                  child: Text(time, style: text.copyWith(color: Colors.orange)),
+                );
+              }).toList(),
+              onChanged: (String? newValue) {
+                setState(() {
+                  _selectedTime = newValue!;
+                });
+              },
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildNumberField(String hint, TextEditingController controller) {
+  return TextField(
+    controller: controller,
+    style: text,
+    keyboardType: TextInputType.number,
+    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+    decoration: InputDecoration(
+      hintText: hint,
+      hintStyle: placeHolder,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(color: Colors.orange),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(color: Colors.orange),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(color: Colors.orange, width: 2),
+      ),
+    ),
+  );
+}
+
+  Widget _buildIngredientsSection() {
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text('Ingredients', style: mediumtitle),
+      const SizedBox(height: 10),
+      IngredientSelector(
+        selectedIds: _selectedIngredientIds,
+        onSelectionChanged: (ids) {
+          setState(() {
+            _selectedIngredientIds = ids;
+          });
+        },
+        hintText: "Search ingredients...",
+      ),
+    ],
+  );
+}
 }
