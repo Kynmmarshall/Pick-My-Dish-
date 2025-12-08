@@ -198,6 +198,7 @@ static Future<bool> uploadRecipe(Map<String, dynamic> recipeData, File? imageFil
       request.fields['ingredients'] = json.encode(recipeData['ingredients']);
       request.fields['instructions'] = json.encode(recipeData['instructions']);
       request.fields['userId'] = recipeData['userId'].toString();
+      request.fields['moods'] = json.encode(recipeData['moods']);
       
       // Add image if exists
       if (imageFile != null) {
@@ -245,6 +246,15 @@ static Future<bool> addIngredient(String name) async {
   } catch (e) {
     print('❌ Error adding ingredient: $e');
     return false;
+  }
+}
+
+static Future<void> testRecipeUpload() async {
+  try {
+    final response = await http.get(Uri.parse('$baseUrl/api/recipes'));
+    debugPrint('Recipes endpoint: ${response.statusCode}');
+  } catch (e) {
+    debugPrint('Recipes endpoint error: $e');
   }
 }
 }

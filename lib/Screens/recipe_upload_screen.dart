@@ -36,6 +36,15 @@ class _RecipeUploadScreenState extends State<RecipeUploadScreen> {
   ];
   
   List<int> _selectedIngredientIds = [];
+  String _selectedCategory = 'Uncategorised';
+  final List<String> _categoryOptions = [
+  'Dessert',
+  'Breakfast',
+  'Lunch',
+  'Dinner',
+  'Snack',
+  'Uncategorised'
+];
 
   final List<String> _emotions = [
     'Happy', 'Sad', 'Energetic', 'Comfort', 
@@ -76,7 +85,7 @@ class _RecipeUploadScreenState extends State<RecipeUploadScreen> {
   
   final recipeData = {
     'name': _nameController.text,
-    'category': 'Uncategorised', // Add category dropdown
+    'category': _selectedCategory, // Add category dropdown
     'time': _selectedTime,
     'calories': _caloriesController.text,
     'ingredients': _selectedIngredientIds,
@@ -136,10 +145,25 @@ class _RecipeUploadScreenState extends State<RecipeUploadScreen> {
             _buildTextField('Recipe Name', _nameController),
             const SizedBox(height: 15),
             
+            // ADD CATEGORY DROPDOWN HERE
+            _buildDropdown(_selectedCategory, _categoryOptions, (newValue) {
+              setState(() {
+                _selectedCategory = newValue;
+              });
+            }, 'Category'
+            
+            
+            ),
+            const SizedBox(height: 15),
+
             // Cooking Time & Calories
             Row(
               children: [
-                Expanded(child: _buildTimeDropdown()),
+                Expanded(child: _buildDropdown(_selectedTime , _timeOptions, (newValue) {
+                  setState(() {
+                    _selectedTime = newValue;
+                  });
+                }, 'Cooking Time')),
                 const SizedBox(width: 10),
                 Expanded(
                   child: _buildNumberField('KiloCalories', _caloriesController),
@@ -291,11 +315,16 @@ class _RecipeUploadScreenState extends State<RecipeUploadScreen> {
     );
   }
 
-  Widget _buildTimeDropdown() {
+  Widget _buildDropdown(
+    String currentValue, 
+    List<String> options, 
+    Function(String) onChanged,
+    String label
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Cooking Time', style: mediumtitle,),
+        Text(label, style: mediumtitle),
         const SizedBox(height: 10),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -305,21 +334,21 @@ class _RecipeUploadScreenState extends State<RecipeUploadScreen> {
           ),
           child: DropdownButtonHideUnderline(
             child: DropdownButton<String>(
-              value: _selectedTime,
+              value: currentValue,
               isExpanded: true,
               dropdownColor: Colors.grey[900],
               style: text,
               icon: Icon(Icons.arrow_drop_down, color: Colors.orange),
-              items: _timeOptions.map((String time) {
+              items: options.map((String option) {
                 return DropdownMenuItem<String>(
-                  value: time,
-                  child: Text(time, style: text.copyWith(color: Colors.orange)),
+                  value: option,
+                  child: Text(option, style: text.copyWith(color: Colors.orange)),
                 );
               }).toList(),
               onChanged: (String? newValue) {
-                setState(() {
-                  _selectedTime = newValue!;
-                });
+                if (newValue != null) {
+                  onChanged(newValue); // ← Call the callback
+                }
               },
             ),
           ),
