@@ -42,7 +42,7 @@ class _HomeScreenState extends State<HomeScreen> {
     'Quick',
     'Light',
   ];
-  List<String> timeOptions = ['15 mins', '30 mins', '1 hour', '2+ hours'];
+  List<String> timeOptions = ['15 mins', '30 mins','45 mins', '1 hour', '1 hour 15 mins', '1 hour 30 mins', '2+ hours'];
   List<Map<String, dynamic>> allIngredients = [];
 
   final DatabaseService _databaseService = DatabaseService();
@@ -459,6 +459,24 @@ class _HomeScreenState extends State<HomeScreen> {
                     _buildPersonalizationSection(),
                     const SizedBox(height: 30),
 
+                    // Personalized Results (if any)
+                    if (showPersonalizedResults &&
+                        personalizedRecipes.isNotEmpty) ...[
+                      Text("Personalized For You", style: mediumtitle),
+                      const SizedBox(height: 10),
+                      ...personalizedRecipes
+                          .take(3)
+                          .map(
+                            (recipe) => Column(
+                              children: [
+                                _buildPersonalizedRecipeCard(recipe),
+                                const SizedBox(height: 10),
+                              ],
+                            ),
+                          ),
+                      const SizedBox(height: 20),
+                    ],
+
                     // Today's Fresh Recipe
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -492,23 +510,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     const SizedBox(height: 15),
 
-                    // Personalized Results (if any)
-                    if (showPersonalizedResults &&
-                        personalizedRecipes.isNotEmpty) ...[
-                      Text("Personalized For You", style: mediumtitle),
-                      const SizedBox(height: 10),
-                      ...personalizedRecipes
-                          .take(3)
-                          .map(
-                            (recipe) => Column(
-                              children: [
-                                _buildPersonalizedRecipeCard(recipe),
-                                const SizedBox(height: 10),
-                              ],
-                            ),
-                          ),
-                      const SizedBox(height: 20),
-                    ],
                     // Regular Recipe Cards
                     _buildRecipeList(),
                     const SizedBox(height: 30),
