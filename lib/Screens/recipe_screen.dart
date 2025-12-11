@@ -261,8 +261,8 @@ class RecipesScreenState extends State<RecipesScreen> {
           children: [
             // Recipe Image from VPS database
             Positioned(
-              top: 20,
-              right: 10,
+              top: 5,
+              right: 5,
               child: Container(
                 width: 99,
                 height: 87,
