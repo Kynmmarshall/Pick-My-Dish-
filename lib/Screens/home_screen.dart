@@ -64,28 +64,78 @@ class _HomeScreenState extends State<HomeScreen> {
     return;
   }
 
+   // Show loading
+  setState(() {
+    _loadingTodayRecipes = true;
+  });
+
   try {
-    // Get the Map results WITH FILTERS
-    final dynamic result = await _databaseService.getFilteredRecipes(
-      ingredients: selectedIngredients,
-      mood: selectedEmotion,
-      time: selectedTime,
-    );
+    // Get all recipes from API
+    final recipeMaps = await ApiService.getRecipes();
+    final allRecipes = recipeMaps.map((map) => Recipe.fromJson(map)).toList();
     
-    // Convert to Recipe objects
-    final List<Recipe> recipes = (result as List).map((item) {
-      if (item is Recipe) return item; // Already Recipe
-      if (item is Map) return Recipe.fromJson(Map<String, dynamic>.from(item));
-      return Recipe.fromJson({});
+    // Apply filters
+    final List<Recipe> filteredRecipes = allRecipes.where((recipe) {
+      bool matches = true;
+      
+      // Filter by emotions/moods
+      if (selectedEmotion != null) {
+        matches = matches && 
+            (recipe.moods.contains(selectedEmotion!) ||
+             recipe.moods.any((mood) => mood.toLowerCase() == selectedEmotion!.toLowerCase()));
+      }
+      
+      // Filter by ingredients
+      if (selectedIngredients.isNotEmpty) {
+        // Convert ingredient IDs to names for comparison
+        final selectedIngredientNames = selectedIngredientIds
+            .map((id) => _getIngredientName(id))
+            .where((name) => name != 'Unknown')
+            .toList();
+        
+        if (selectedIngredientNames.isNotEmpty) {
+          matches = matches && recipe.ingredients.any((recipeIngredient) {
+            return selectedIngredientNames.any((selectedIngredient) {
+              return recipeIngredient.toLowerCase().contains(selectedIngredient.toLowerCase());
+            });
+          });
+        }
+      }
+      
+      // Filter by cooking time (simplified)
+      if (selectedTime != null) {
+        final selectedMinutes = _parseTimeToMinutes(selectedTime!);
+        final recipeMinutes = _parseTimeToMinutes(recipe.cookingTime);
+        
+        // Show recipes with less or equal time
+        if (selectedMinutes > 0 && recipeMinutes > 0) {
+          matches = matches && recipeMinutes <= selectedMinutes;
+        }
+      }
+      
+      return matches;
     }).toList();
 
     setState(() {
-      personalizedRecipes = recipes;
+      personalizedRecipes = filteredRecipes;
       showPersonalizedResults = true;
+      _loadingTodayRecipes = false;
     });
 
-    _showPersonalizedResults(recipes);
+    if (filteredRecipes.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('No recipes found with your criteria', style: text),
+          backgroundColor: Colors.orange,
+        ),
+      );
+    } else {
+      _showPersonalizedResults(filteredRecipes);
+    }
   } catch (e) {
+    setState(() {
+      _loadingTodayRecipes = false;
+    });
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('Error generating recipes: $e', style: text),
@@ -95,6 +145,22 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
   
+  // Helper method to parse time strings to minutes
+  int _parseTimeToMinutes(String time) {
+    if (time.toLowerCase().contains('min')) {
+      final matches = RegExp(r'(\d+)').firstMatch(time);
+      if (matches != null) {
+        return int.parse(matches.group(1)!);
+      }
+    } else if (time.toLowerCase().contains('hour')) {
+      final matches = RegExp(r'(\d+)').firstMatch(time);
+      if (matches != null) {
+        return int.parse(matches.group(1)!) * 60;
+      }
+    }
+    return 0;
+  }
+
   void _loadTodayRecipes() async {
     if (_loadingTodayRecipes) return;
     
@@ -119,6 +185,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _loadTodayRecipes();
+    _loadIngredients();
   }
 
   void _logout() async {
@@ -142,20 +209,27 @@ class _HomeScreenState extends State<HomeScreen> {
       builder: (context) => AlertDialog(
         backgroundColor: Colors.black,
         title: Text(
-          'Personalized Recipes',
+          'Personalized Recipes (${recipes.length})',
           style: title.copyWith(fontSize: 24),
         ),
         content: SizedBox(
           width: double.maxFinite,
           child: recipes.isEmpty
               ? Text('No recipes found with your criteria', style: text)
-              : ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: recipes.length,
-                  itemBuilder: (context, index) {
-                    final recipe = recipes[index];
-                    return _buildPersonalizedRecipeCard(recipe);
-                  },
+              : SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      ...recipes.map(
+                        (recipe) => Column(
+                          children: [
+                            _buildPersonalizedRecipeCard(recipe),
+                            const SizedBox(height: 10),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
         ),
         actions: [
@@ -167,8 +241,15 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
-
+  
+  // Update your _getIngredientName method to handle API data
   String _getIngredientName(int id) {
+    if (allIngredients.isEmpty) {
+      // Load ingredients if not loaded
+      _loadIngredients();
+      return 'Loading...';
+    }
+    
     final ingredient = allIngredients.firstWhere(
       (ing) => ing['id'] == id,
       orElse: () => {'name': 'Unknown'},
@@ -176,9 +257,19 @@ class _HomeScreenState extends State<HomeScreen> {
     return ingredient['name'];
   }
 
-  Widget _buildPersonalizedRecipeCard(Recipe recipe) {
-    List<String> moods = List<String>.from(recipe.moods);
+  // Add a method to load ingredients
+  Future<void> _loadIngredients() async {
+    try {
+      final ingredients = await ApiService.getIngredients();
+      setState(() {
+        allIngredients = ingredients;
+      });
+    } catch (e) {
+      print('Error loading ingredients: $e');
+    }
+  }
 
+  Widget _buildPersonalizedRecipeCard(Recipe recipe) {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
@@ -191,10 +282,14 @@ class _HomeScreenState extends State<HomeScreen> {
           height: 50,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(8),
-            image: DecorationImage(
-              image: AssetImage(recipe.imagePath),
-              fit: BoxFit.cover,
-            ),
+          ),
+          child: CachedProfileImage(
+            imagePath: recipe.imagePath,
+            radius: 8,
+            isProfilePicture: false,
+            width: 50,
+            height: 50,
+            fit: BoxFit.cover,
           ),
         ),
         title: Text(
@@ -211,10 +306,16 @@ class _HomeScreenState extends State<HomeScreen> {
               'Time: ${recipe.cookingTime}',
               style: const TextStyle(color: Colors.orange),
             ),
-            Text(
-              'Mood: ${moods.join(', ')}',
-              style: const TextStyle(color: Colors.white70, fontSize: 12),
-            ),
+            if (recipe.moods.isNotEmpty)
+              Text(
+                'Mood: ${recipe.moods.join(', ')}',
+                style: const TextStyle(color: Colors.white70, fontSize: 12),
+              ),
+            if (recipe.category.isNotEmpty)
+              Text(
+                'Category: ${recipe.category}',
+                style: const TextStyle(color: Colors.white70, fontSize: 12),
+              ),
           ],
         ),
         trailing: const Icon(
