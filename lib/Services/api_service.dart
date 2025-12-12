@@ -254,6 +254,83 @@ static Future<bool> addIngredient(String name) async {
   }
 }
 
+  // Get user's favorite recipes
+  static Future<List<Map<String, dynamic>>> getUserFavorites(int userId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/users/$userId/favorites'),
+        headers: {'Content-Type': 'application/json'},
+      );
+      
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return List<Map<String, dynamic>>.from(data['favorites'] ?? []);
+      }
+      return [];
+    } catch (e) {
+      debugPrint('❌ Error fetching favorites: $e');
+      return [];
+    }
+  }
+
+  // Add recipe to favorites
+  static Future<bool> addToFavorites(int userId, int recipeId) async {
+    debugPrint('📤 API: Adding favorite - User: $userId, Recipe: $recipeId');
+    debugPrint('📤 URL: $baseUrl/api/users/favorites');
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/users/favorites'),
+        body: json.encode({
+          'userId': userId,
+          'recipeId': recipeId,
+        }),
+        headers: {'Content-Type': 'application/json'},
+      );
+      
+      return response.statusCode == 201;
+    } catch (e) {
+      debugPrint('❌ Error adding to favorites: $e');
+      return false;
+    }
+  }
+
+  // Remove recipe from favorites
+  static Future<bool> removeFromFavorites(int userId, int recipeId) async {
+    try {
+      final response = await http.delete(
+        Uri.parse('$baseUrl/api/users/favorites'),
+        body: json.encode({
+          'userId': userId,
+          'recipeId': recipeId,
+        }),
+        headers: {'Content-Type': 'application/json'},
+      );
+      
+      return response.statusCode == 200;
+    } catch (e) {
+      debugPrint('❌ Error removing from favorites: $e');
+      return false;
+    }
+  }
+
+  // Check if recipe is favorited by user
+  static Future<bool> isRecipeFavorited(int userId, int recipeId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/users/favorites/check?userId=$userId&recipeId=$recipeId'),
+      );
+      
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return data['isFavorited'] ?? false;
+      }
+      return false;
+    } catch (e) {
+      debugPrint('❌ Error checking favorite status: $e');
+      return false;
+    }
+  }
+
 static Future<void> testRecipeUpload() async {
   try {
     final response = await http.get(Uri.parse('$baseUrl/api/recipes'));

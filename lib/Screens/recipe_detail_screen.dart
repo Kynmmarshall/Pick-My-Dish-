@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:pick_my_dish/Models/recipe_model.dart';
 import 'package:pick_my_dish/Providers/recipe_provider.dart';
+import 'package:pick_my_dish/Providers/user_provider.dart';
 import 'package:pick_my_dish/constants.dart';
 import 'package:pick_my_dish/widgets/cached_image.dart';
 import 'package:provider/provider.dart';
@@ -16,7 +17,6 @@ class RecipeDetailScreen extends StatefulWidget {
 
 class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
   late Recipe recipe;
-
   @override
   void initState() {
     super.initState();
@@ -25,6 +25,8 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final recipeProvider = Provider.of<RecipeProvider>(context, listen: false);
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
     return Scaffold(
       backgroundColor: Colors.black,
       body: CustomScrollView(
@@ -62,7 +64,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                   ),
                   onPressed: () {
                     final recipeProvider = Provider.of<RecipeProvider>(context, listen: false);
-                    recipeProvider.toggleFavorite(recipe.id);
+                    recipeProvider.toggleFavorite(userProvider.userId, recipe.id);
                     
                     setState(() {
                       recipe = recipe.copyWith(isFavorite: !recipe.isFavorite);

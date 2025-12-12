@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:pick_my_dish/Models/recipe_model.dart';
+import 'package:pick_my_dish/Providers/recipe_provider.dart';
 import 'package:pick_my_dish/Providers/user_provider.dart';
 import 'package:pick_my_dish/Screens/login_screen.dart';
 import 'package:pick_my_dish/Screens/recipe_detail_screen.dart';
@@ -213,6 +214,12 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     _loadTodayRecipes();
     _loadIngredients();
+
+    //Load all recipes into RecipeProvider
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+    final recipeProvider = Provider.of<RecipeProvider>(context, listen: false);
+    recipeProvider.loadRecipes();
+  });
   }
 
   void _logout() async {

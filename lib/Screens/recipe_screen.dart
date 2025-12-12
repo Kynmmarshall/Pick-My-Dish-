@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:pick_my_dish/Models/recipe_model.dart';
 import 'package:pick_my_dish/Providers/recipe_provider.dart'; // Add this
+import 'package:pick_my_dish/Providers/user_provider.dart';
 import 'package:pick_my_dish/Screens/favorite_screen.dart';
 import 'package:pick_my_dish/Screens/recipe_upload_screen.dart';
 import 'package:pick_my_dish/Services/api_service.dart';
@@ -345,13 +346,13 @@ class RecipesScreenState extends State<RecipesScreen> {
   }
 
   void _toggleFavorite(Recipe recipe) {
-    // Get RecipeProvider
     final recipeProvider = Provider.of<RecipeProvider>(context, listen: false);
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
     
-    // Update in provider
-    recipeProvider.toggleFavorite(recipe.id);
+    // Use Option 2 (simpler approach):
+    recipeProvider.toggleFavorite(userProvider.userId, recipe.id);
     
-    // Update local UI
+    // Update local state if needed
     setState(() {
       final index = allRecipes.indexWhere((r) => r.id == recipe.id);
       if (index != -1) {
@@ -360,8 +361,6 @@ class RecipesScreenState extends State<RecipesScreen> {
         );
       }
     });
-    
-    // TODO: Call API to update favorite status in database
-    // ApiService.toggleFavorite(recipe.id, recipe.isFavorite);
   }
+  
 }
