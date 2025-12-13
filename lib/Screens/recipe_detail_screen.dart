@@ -25,8 +25,9 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final recipeProvider = Provider.of<RecipeProvider>(context, listen: false);
+    final recipeProvider = Provider.of<RecipeProvider>(context, listen: true);
     final userProvider = Provider.of<UserProvider>(context, listen: false);
+    bool isFavorite = recipeProvider.isFavorite(recipe.id);
     return Scaffold(
       backgroundColor: Colors.black,
       body: CustomScrollView(
@@ -58,12 +59,11 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                 padding: const EdgeInsets.only(top: 20, right: 20),
                 child: IconButton(
                   icon: Icon(
-                    recipe.isFavorite ? Icons.favorite : Icons.favorite_border,
+                    isFavorite ? Icons.favorite : Icons.favorite_border,
                     color: Colors.orange,
                     size: 30,
                   ),
                   onPressed: () {
-                    final recipeProvider = Provider.of<RecipeProvider>(context, listen: false);
                     recipeProvider.toggleFavorite(userProvider.userId, recipe.id);
                     
                     setState(() {

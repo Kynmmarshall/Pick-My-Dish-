@@ -21,62 +21,66 @@ class RecipeProvider with ChangeNotifier {
 
   // Toggle favorite
   Future<void> toggleFavorite(int userId, int recipeId) async {
-  debugPrint('🔄 RecipeProvider.toggleFavorite called');
-  debugPrint('   👤 User ID: $userId');
-  debugPrint('   📝 Recipe ID: $recipeId');
-  
-  if (userId == 0) {
-    debugPrint('❌ Cannot toggle favorite: User ID is 0 (not logged in)');
-    return;
-  }
-
-  final recipe = getRecipeById(recipeId);
-  if (recipe == null) {
-    debugPrint('❌ Cannot toggle favorite: Recipe $recipeId not found');
-    return;
-  }
-
-  debugPrint('🔍 Checking if recipe is already favorite...');
-  bool wasFavorite = isFavorite(recipeId);
-  debugPrint('   📊 Currently favorite? $wasFavorite');
-  
-  bool success;
-  if (wasFavorite) {
-    debugPrint('🗑️ Removing from favorites...');
-    success = await ApiService.removeFromFavorites(userId, recipeId);
-    if (success) {
-      _userFavorites.removeWhere((r) => r.id == recipeId);
-      debugPrint('✅ Removed from local list');
-    }
-  } else {
-    debugPrint('💖 Adding to favorites...');
-    success = await ApiService.addToFavorites(userId, recipeId);
-    if (success) {
-      _userFavorites.add(recipe);
-      debugPrint('✅ Added to local list');
-    }
-  }
-
-  debugPrint('📊 API call result: $success');
-  
-  if (success) {
-    // Update main recipes list
-    final index = _recipes.indexWhere((r) => r.id == recipeId);
-    if (index != -1) {
-      _recipes[index] = _recipes[index].copyWith(isFavorite: !wasFavorite);
-      debugPrint('🔄 Updated recipe in main list');
-    }
+    debugPrint('🔄 RecipeProvider.toggleFavorite called');
+    debugPrint('   👤 User ID: $userId');
+    debugPrint('   📝 Recipe ID: $recipeId');
     
-    // Schedule UI update
-    Future.microtask(() {
-      debugPrint('📢 Notifying listeners...');
-      notifyListeners();
-      debugPrint('📊 Current favorites count: ${_userFavorites.length}');
-    });
-  } else {
-    debugPrint('❌ API call failed - favorite not saved to database');
+    if (userId == 0) {
+      debugPrint('❌ Cannot toggle favorite: User ID is 0 (not logged in)');
+      return;
+    }
+
+    final recipe = getRecipeById(recipeId);
+    if (recipe == null) {
+      debugPrint('❌ Cannot toggle favorite: Recipe $recipeId not found');
+      return;
+    }
+
+    debugPrint('🔍 Checking if recipe is already favorite...');
+    bool wasFavorite = isFavorite(recipeId);
+    debugPrint('   📊 Currently favorite? $wasFavorite');
+    
+    bool success;
+    if (wasFavorite) {
+      debugPrint('🗑️ Removing from favorites...');
+      success = await ApiService.removeFromFavorites(userId, recipeId);
+      if (success) {
+        _userFavorites.removeWhere((r) => r.id == recipeId);
+        debugPrint('✅ Removed from local list');
+      }
+    } else {
+      debugPrint('💖 Adding to favorites...');
+      success = await ApiService.addToFavorites(userId, recipeId);
+      if (success) {
+        _userFavorites.add(recipe);
+        debugPrint('✅ Added to local list');
+      }
+    }
+
+    debugPrint('📊 API call result: $success');
+    
+    if (success) {
+      // Update main recipes list
+      final index = _recipes.indexWhere((r) => r.id == recipeId);
+      if (index != -1) {
+        _recipes[index] = _recipes[index].copyWith(isFavorite: !wasFavorite);
+        debugPrint('🔄 Updated recipe in main list');
+      }
+      
+      // Sync all recipes
+      _syncFavoriteStatus();
+      await loadRecipes();
+      // Schedule UI update
+      Future.microtask(() {
+        debugPrint('📢 Notifying listeners...');
+        notifyListeners();
+        debugPrint('📊 Current favorites count: ${_userFavorites.length}');
+      });
+    } else {
+      debugPrint('❌ API call failed - favorite not saved to database');
+    }
   }
-}
+  
   // Get recipe by ID
   Recipe? getRecipeById(int id) {
     try {
@@ -115,7 +119,7 @@ class RecipeProvider with ChangeNotifier {
 }
   
   // Clear on logout
-  void clear() {
+  void logout() {
     _recipes.clear();
     _userFavorites.clear();
     notifyListeners();
@@ -131,8 +135,8 @@ class RecipeProvider with ChangeNotifier {
       final List<Map<String, dynamic>> recipeMaps = await ApiService.getRecipes();
       _recipes = recipeMaps.map((json) => Recipe.fromJson(json)).toList();
       
-      // Load favorites from local storage/sync here if needed
-      // _favoriteIds = await _loadFavoritesFromStorage();
+      // CRITICAL: Sync favorite status with _userFavorites list
+      _syncFavoriteStatus();
       
     } catch (e) {
       _error = 'Failed to load recipes: $e';
@@ -143,6 +147,21 @@ class RecipeProvider with ChangeNotifier {
     }
   }
   
+  //sync favorite status of recipes
+  void _syncFavoriteStatus() {
+    // Update each recipe's isFavorite based on _userFavorites
+    for (int i = 0; i < _recipes.length; i++) {
+      final recipe = _recipes[i];
+      final isFav = _userFavorites.any((fav) => fav.id == recipe.id);
+      if (recipe.isFavorite != isFav) {
+        _recipes[i] = recipe.copyWith(isFavorite: isFav);
+      }
+    }
+    
+    debugPrint('🔄 Synced favorite status for ${_recipes.length} recipes');
+    debugPrint('   Total favorites: ${_userFavorites.length}');
+  }
+
   // Filter recipes (for search)
   List<Recipe> filterRecipes(String query) {
     if (query.isEmpty) return _recipes;

@@ -251,6 +251,8 @@ class RecipesScreenState extends State<RecipesScreen> {
   }
 
   Widget buildRecipeCard(Recipe recipe) {
+    final recipeProvider = Provider.of<RecipeProvider>(context);
+    bool isFavorite = recipeProvider.isFavorite(recipe.id);
     return GestureDetector(
       onTap: () => _showRecipeDetails(recipe),
       child: Container(
@@ -287,7 +289,7 @@ class RecipesScreenState extends State<RecipesScreen> {
                   _toggleFavorite(recipe);
                 },
                 child: Icon(
-                  recipe.isFavorite ? Icons.favorite : Icons.favorite_border, // Use Recipe property
+                  isFavorite ? Icons.favorite : Icons.favorite_border, // Use Recipe property
                   color: Colors.orange,
                   size: iconSize,
                 ),
@@ -349,7 +351,6 @@ class RecipesScreenState extends State<RecipesScreen> {
     final recipeProvider = Provider.of<RecipeProvider>(context, listen: false);
     final userProvider = Provider.of<UserProvider>(context, listen: false);
     
-    // Use Option 2 (simpler approach):
     recipeProvider.toggleFavorite(userProvider.userId, recipe.id);
     
     // Update local state if needed

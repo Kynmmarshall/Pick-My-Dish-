@@ -114,9 +114,19 @@ class UserProvider with ChangeNotifier {
   Future<void> _clearImageCache() async {
     try {
       final cacheManager = DefaultCacheManager();
-      await cacheManager.emptyCache(); // Clear all cached images
+      
+      // Clear ALL cached images (more thorough)
+      await cacheManager.emptyCache();
+      
+      // OR clear only specific profile picture URLs
+      // if you want more targeted clearing:
+      if (_profilePicture.startsWith('http')) {
+        await cacheManager.removeFile(_profilePicture);
+      }
+      
+      debugPrint('🗑️ Image cache cleared');
     } catch (e) {
-      debugPrint('Error clearing cache: $e');
+      debugPrint('⚠️ Error clearing cache: $e');
     }
   }
 

@@ -225,8 +225,9 @@ class _HomeScreenState extends State<HomeScreen> {
   void _logout() async {
     // 1. Clear all user data from provider
     final userProvider = Provider.of<UserProvider>(context, listen: false);
+    final recipeProvider = Provider.of<RecipeProvider>(context, listen: false);
     userProvider.logout();
-    
+    recipeProvider.logout();    
     // 2. Navigate to login (clear navigation stack)
     if (mounted) {
       Navigator.pushAndRemoveUntil(
@@ -657,6 +658,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget buildRecipeCard(Recipe recipe) {
+    final recipeProvider = Provider.of<RecipeProvider>(context);
+    bool isFavorite = recipeProvider.isFavorite(recipe.id);
     return GestureDetector(
       onTap: () {
         _showRecipeDetails(recipe);
@@ -742,7 +745,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   // Toggle favorite logic
                 },
                 child: Icon(
-                  recipe.isFavorite ? Icons.favorite : Icons.favorite_border,
+                  isFavorite ? Icons.favorite : Icons.favorite_border,
                   color: Colors.orange,
                   size: 25,
                 ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
+import 'package:pick_my_dish/Providers/recipe_provider.dart';
 import 'package:pick_my_dish/Providers/user_provider.dart';
 import 'package:pick_my_dish/Screens/login_screen.dart';
 import 'package:pick_my_dish/Services/api_service.dart';
@@ -74,7 +75,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void _logout() async {
     // 1. Clear all user data from provider
     final userProvider = Provider.of<UserProvider>(context, listen: false);
+    final recipeProvider = Provider.of<RecipeProvider>(context, listen: false);
     userProvider.logout();
+    recipeProvider.logout();   
     
     // 2. Navigate to login (clear navigation stack)
     if (mounted) {
