@@ -203,4 +203,52 @@ class RecipeProvider with ChangeNotifier {
     }).toList();
   }
 
+  // Check if recipe can be edited/deleted by current user
+  bool canEditRecipe(int recipeId, int userId, bool isAdmin) {
+    final recipe = getRecipeById(recipeId);
+    if (recipe == null) return false;
+    return isAdmin || recipe.creatorId == userId;
+  }
+
+  bool canDeleteRecipe(int recipeId, int userId, bool isAdmin) {
+    return canEditRecipe(recipeId, userId, isAdmin);
+  }
+
+  // Load recipes with permissions
+  Future<void> loadRecipesWithPermissions(int userId) async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      final recipeMaps = await ApiService.getRecipesWithPermissions(userId);
+      _recipes = recipeMaps.map((json) => Recipe.fromJson(json)).toList();
+      
+      _syncFavoriteStatus();
+      
+    } catch (e) {
+      _error = 'Failed to load recipes: $e';
+      debugPrint('❌ RecipeProvider load error: $e');
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  // Delete recipe
+  Future<bool> deleteRecipe(int recipeId, int userId) async {
+    try {
+      final success = await ApiService.deleteRecipe(recipeId, userId);
+      if (success) {
+        _recipes.removeWhere((recipe) => recipe.id == recipeId);
+        _userFavorites.removeWhere((recipe) => recipe.id == recipeId);
+        notifyListeners();
+      }
+      return success;
+    } catch (e) {
+      debugPrint('❌ Error deleting recipe: $e');
+      return false;
+    }
+  }
+
 }

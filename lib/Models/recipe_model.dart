@@ -15,6 +15,8 @@ class Recipe {
   final int userId;
   final int? creatorId; // NEW: track recipe creator
   final bool isFavorite;
+  final bool canEdit; // Added: computed property
+  final bool canDelete; // Added: computed property
 
   Recipe({
     required this.id,
@@ -30,6 +32,8 @@ class Recipe {
     required this.userId,
     this.creatorId, // NEW: track recipe creator
     this.isFavorite = false,
+    this.canEdit = false,
+    this.canDelete = false,
   });
 
   factory Recipe.fromJson(Map<String, dynamic> json) {
@@ -76,6 +80,17 @@ class Recipe {
       isFavorite: json['isFavorite'] ?? false,
     );
   }
+
+  // Check if current user can edit this recipe
+  bool canUserEdit(int currentUserId, bool isAdmin) {
+    return isAdmin || creatorId == currentUserId;
+  }
+
+  // Check if current user can delete this recipe
+  bool canUserDelete(int currentUserId, bool isAdmin) {
+    return isAdmin || creatorId == currentUserId;
+  }
+
   Recipe copyWith({
     int? id,
     String? name,
@@ -89,6 +104,9 @@ class Recipe {
     List<String>? moods,
     int? userId,
     bool? isFavorite,
+    int? creatorId,
+    bool? canEdit,
+    bool? canDelete,
   }) {
     return Recipe(
       id: id ?? this.id,
@@ -102,15 +120,13 @@ class Recipe {
       steps: steps ?? this.steps,
       moods: moods ?? this.moods,
       userId: userId ?? this.userId,
+      creatorId: creatorId ?? this.creatorId,
       isFavorite: isFavorite ?? this.isFavorite,
+      canEdit: canEdit ?? this.canEdit,
+      canDelete: canDelete ?? this.canDelete,
     );
   }
 
-  // Helper method to check if user can edit/delete
-  bool canUserEdit(int userId, bool isAdmin) {
-    if (isAdmin) return true; // Admins can edit everything
-    return creatorId == userId; // Regular users only their own
-  }
 
   Map<String, dynamic> toJson() {
     return {

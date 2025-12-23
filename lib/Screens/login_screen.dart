@@ -47,35 +47,32 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       // Call your backend API
       final Map<String, dynamic>? response = await ApiService.login(
-  _emailController.text.trim(),
-  _passwordController.text,
-);
+        _emailController.text.trim(),
+        _passwordController.text,
+      );
 
-if (response != null && response['user'] != null) {
-  final userProvider = Provider.of<UserProvider>(context, listen: false);
-  
-  // Use the actual user data from API
-  userProvider.setUser(User.fromJson(response['user']));
-  
-  if (context.mounted) {
-    Navigator.pushReplacement(
-      context, 
-      MaterialPageRoute(builder: (context) => HomeScreen())
-    );
-  }
-} else {
-  // Handle error
-  final errorMessage = response?['error'] ?? 'Login failed';
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(errorMessage, style: text),
-        backgroundColor: Colors.red,
-      ),
-    );
-  }
-
-      // Hide loading
-      Navigator.pop(context);
+      // if (response != null && response['user'] != null) {
+      //   final userProvider = Provider.of<UserProvider>(context, listen: false);
+        
+      //   // Use the actual user data from API
+      //   userProvider.setUser(User.fromJson(response['user']));
+      //   userProvider.setUserId(response['userId'] ?? 0);
+      //   if (context.mounted) {
+      //     Navigator.pushReplacement(
+      //       context, 
+      //       MaterialPageRoute(builder: (context) => HomeScreen())
+      //     );
+      //   }
+      // } else {
+      //   // Handle error
+      //   final errorMessage = response?['error'] ?? 'Login failed';
+      //     ScaffoldMessenger.of(context).showSnackBar(
+      //       SnackBar(
+      //         content: Text(errorMessage, style: text),
+      //         backgroundColor: Colors.red,
+      //       ),
+      //     );
+      //   }
 
       if (response != null && response['user'] != null) {
         // Login successful - navigate to home
@@ -84,7 +81,7 @@ if (response != null && response['user'] != null) {
       // Use the actual user data from API
       userProvider.setUser(User.fromJson(response['user']));
       // Store the user ID from login response
-      userProvider.setUserId(response['userId']);
+      userProvider.setUserId(response['userId'] ?? 0);
       
       if (context.mounted) {
         Navigator.pushReplacement(

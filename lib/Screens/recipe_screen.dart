@@ -3,6 +3,7 @@ import 'package:pick_my_dish/Models/recipe_model.dart';
 import 'package:pick_my_dish/Providers/recipe_provider.dart'; // Add this
 import 'package:pick_my_dish/Providers/user_provider.dart';
 import 'package:pick_my_dish/Screens/favorite_screen.dart';
+import 'package:pick_my_dish/Screens/recipe_edit_screen.dart';
 import 'package:pick_my_dish/Screens/recipe_upload_screen.dart';
 import 'package:pick_my_dish/Services/api_service.dart';
 import 'package:pick_my_dish/constants.dart';
@@ -11,7 +12,12 @@ import 'package:pick_my_dish/widgets/cached_image.dart';
 import 'package:provider/provider.dart'; // Add this
 
 class RecipesScreen extends StatefulWidget {
-  const RecipesScreen({super.key});
+  final bool showUserRecipesOnly; // Add this parameter
+  
+  const RecipesScreen({
+    super.key,
+    this.showUserRecipesOnly = false,
+  });
 
   @override
   State<RecipesScreen> createState() => RecipesScreenState();
@@ -35,8 +41,14 @@ class RecipesScreenState extends State<RecipesScreen> {
   Future<void> _loadRecipes() async {
     try {
       final recipeMaps = await ApiService.getRecipes(); // This returns List<Map>
-      final recipes = recipeMaps.map((map) => Recipe.fromJson(map)).toList();
+      var recipes = recipeMaps.map((map) => Recipe.fromJson(map)).toList();
       
+      // Filter user's recipes if needed
+      if (widget.showUserRecipesOnly) {
+        final userProvider = Provider.of<UserProvider>(context, listen: false);
+        recipes = recipes.where((recipe) => recipe.creatorId == userProvider.userId).toList();
+      }
+
       setState(() {
         allRecipes = recipes;
         isLoading = false;
@@ -252,7 +264,11 @@ class RecipesScreenState extends State<RecipesScreen> {
 
   Widget buildRecipeCard(Recipe recipe) {
     final recipeProvider = Provider.of<RecipeProvider>(context);
+    final userProvider = Provider.of<UserProvider>(context);
     bool isFavorite = recipeProvider.isFavorite(recipe.id);
+    final isAdmin = userProvider.user?.isAdmin ?? false;
+    final canEdit = recipe.canUserEdit(userProvider.userId, isAdmin);
+    
     return GestureDetector(
       onTap: () => _showRecipeDetails(recipe),
       child: Container(
@@ -279,7 +295,6 @@ class RecipesScreenState extends State<RecipesScreen> {
                 ),
               ),
             ),
-
             // Favorite Icon
             Positioned(
               top: 10,
@@ -364,4 +379,13 @@ class RecipesScreenState extends State<RecipesScreen> {
     });
   }
   
+  void _editRecipe(Recipe recipe) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => RecipeEditScreen(recipe: recipe),
+      ),
+    );
+  }
+
 }

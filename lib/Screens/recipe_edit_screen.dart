@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:pick_my_dish/Models/recipe_model.dart';
+import 'package:pick_my_dish/Providers/recipe_provider.dart';
 import 'package:pick_my_dish/Providers/user_provider.dart';
 import 'package:pick_my_dish/Services/api_service.dart';
 import 'package:pick_my_dish/constants.dart';
@@ -99,7 +100,22 @@ class _RecipeEditScreenState extends State<RecipeEditScreen> {
     }
     
     final userProvider = Provider.of<UserProvider>(context, listen: false);
+    final recipeProvider = Provider.of<RecipeProvider>(context, listen: false);
     
+    // Check if user can still edit (in case permissions changed)
+    final canEdit = recipeProvider.canEditRecipe(
+      widget.recipe.id, 
+      userProvider.userId, 
+      userProvider.user?.isAdmin ?? false
+    );
+    
+    if (!canEdit) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('You are no longer authorized to edit this recipe')),
+      );
+      return;
+    }
+
     final recipeData = {
       'name': _nameController.text,
       'category': _selectedCategory,

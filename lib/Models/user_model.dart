@@ -4,12 +4,14 @@ class User {
   final String email;
   final String? profileImage;
   final DateTime joinedDate;
+  final bool isAdmin;
 
   User({
     required this.id,
     required this.username,
     required this.email,
     this.profileImage, 
+    this.isAdmin = false,
     DateTime? joinedDate,
   }): joinedDate = joinedDate ?? DateTime.now(); 
 
@@ -41,6 +43,7 @@ class User {
       joinedDate: json['created_at'] != null 
         ? DateTime.parse(json['created_at'])  // ← Parse from database
         : null,
+      isAdmin: (json['is_admin'] ?? 0) == 1, // Convert int to bool
     );
   }
 

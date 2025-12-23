@@ -2,14 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:pick_my_dish/Models/recipe_model.dart';
 import 'package:pick_my_dish/Providers/recipe_provider.dart';
 import 'package:pick_my_dish/Providers/user_provider.dart';
+import 'package:pick_my_dish/Screens/recipe_edit_screen.dart';
 import 'package:pick_my_dish/constants.dart';
 import 'package:pick_my_dish/widgets/cached_image.dart';
 import 'package:provider/provider.dart';
 
 class RecipeDetailScreen extends StatefulWidget {
   final Recipe initialRecipe;
+  final bool showEditOptions; // Add this
 
-  const RecipeDetailScreen({super.key, required this.initialRecipe});
+  const RecipeDetailScreen({
+    super.key, 
+    required this.initialRecipe,
+    this.showEditOptions = true,
+  });
   
   @override
   State<RecipeDetailScreen> createState() => _RecipeDetailScreenState();
@@ -27,7 +33,12 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
   Widget build(BuildContext context) {
     final recipeProvider = Provider.of<RecipeProvider>(context, listen: true);
     final userProvider = Provider.of<UserProvider>(context, listen: false);
+    final isAdmin = userProvider.user?.isAdmin ?? false;
     bool isFavorite = recipeProvider.isFavorite(recipe.id);
+    
+    // Check if user can edit/delete
+    final canEdit = recipe.canUserEdit(userProvider.userId, isAdmin);
+    final canDelete = recipe.canUserDelete(userProvider.userId, isAdmin);
     return Scaffold(
       backgroundColor: Colors.black,
       body: CustomScrollView(
@@ -55,6 +66,52 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
               ),
             ),
             actions: [
+              if (canEdit || canDelete) // Show menu if user has permissions
+                PopupMenuButton<String>(
+                  icon: Icon(Icons.more_vert, color: Colors.white),
+                  onSelected: (value) {
+                    if (value == 'edit') {
+                      _navigateToEditScreen(recipe);
+                    } else if (value == 'delete') {
+                      _deleteRecipe(recipe, userProvider.userId);
+                    }
+                  },
+                  itemBuilder: (BuildContext context) {
+                    List<PopupMenuEntry<String>> items = [];
+                    
+                    if (canEdit) {
+                      items.add(
+                        PopupMenuItem<String>(
+                          value: 'edit',
+                          child: Row(
+                            children: [
+                              Icon(Icons.edit, color: Colors.orange),
+                              SizedBox(width: 8),
+                              Text('Edit Recipe'),
+                            ],
+                          ),
+                        ),
+                      );
+                    }
+                    
+                    if (canDelete) {
+                      items.add(
+                        PopupMenuItem<String>(
+                          value: 'delete',
+                          child: Row(
+                            children: [
+                              Icon(Icons.delete, color: Colors.red),
+                              SizedBox(width: 8),
+                              Text('Delete Recipe'),
+                            ],
+                          ),
+                        ),
+                      );
+                    }
+                    
+                    return items;
+                  },
+                ),
               Padding(
                 padding: const EdgeInsets.only(top: 20, right: 20),
                 child: IconButton(
@@ -313,5 +370,57 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
         ],
       ),
     );
+  }
+
+  void _navigateToEditScreen(Recipe recipe) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => RecipeEditScreen(recipe: recipe),
+      ),
+    );
+  }
+
+  void _deleteRecipe(Recipe recipe, int userId) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Delete Recipe', style: title),
+        content: Text('Are you sure you want to delete "${recipe.name}"?', style: text),
+        backgroundColor: Colors.black,
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('Cancel', style: text.copyWith(color: Colors.white)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text('Delete', style: text.copyWith(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      final recipeProvider = Provider.of<RecipeProvider>(context, listen: false);
+      final success = await recipeProvider.deleteRecipe(recipe.id, userId);
+      
+      if (success && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Recipe deleted successfully', style: text),
+            backgroundColor: Colors.green,
+          ),
+        );
+        Navigator.pop(context); // Go back to previous screen
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to delete recipe', style: text),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 }

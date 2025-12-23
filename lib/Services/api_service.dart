@@ -35,6 +35,8 @@ class ApiService {
         headers: {'Content-Type': 'application/json'},
       );
       final errorData = json.decode(response.body);
+      // ADD THIS DEBUG LINE:
+      debugPrint('Login Response: ${response.body}');
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         debugPrint('✅ Login successful: ${data['message']}');
@@ -331,63 +333,106 @@ static Future<bool> isRecipeFavorited(int userId, int recipeId) async {
   }
 }
 
-// Delete recipe
-static Future<bool> deleteRecipe(int recipeId, int userId) async {
-  try {
-    final response = await http.delete(
-      Uri.parse('$baseUrl/api/recipes/$recipeId'),
-      body: json.encode({
-        'userId': userId, // For authorization check on backend
-      }),
-      headers: {'Content-Type': 'application/json'},
-    );
-    
-    return response.statusCode == 200;
-  } catch (e) {
-    debugPrint('❌ Error deleting recipe: $e');
-    return false;
-  }
-}
-
-// Update recipe
-static Future<bool> updateRecipe(
-  int recipeId,
-  Map<String, dynamic> recipeData,
-  File? imageFile,
-  int userId
-) async {
-  try {
-    var request = http.MultipartRequest(
-      'PUT', 
-      Uri.parse('$baseUrl/api/recipes/$recipeId')
-    );
-    
-    // Add recipe data
-    request.fields['userId'] = userId.toString();
-    request.fields['name'] = recipeData['name'];
-    request.fields['category'] = recipeData['category'];
-    request.fields['time'] = recipeData['time'];
-    request.fields['calories'] = recipeData['calories'];
-    request.fields['ingredients'] = json.encode(recipeData['ingredients']);
-    request.fields['instructions'] = json.encode(recipeData['instructions']);
-    
-    final emotions = recipeData['emotions'] ?? [];
-    request.fields['emotions'] = json.encode(emotions);
-    
-    // Add image if exists
-    if (imageFile != null) {
-      request.files.add(
-        await http.MultipartFile.fromPath('image', imageFile.path)
+// Check if user is admin
+static Future<bool> isUserAdmin(int userId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/users/$userId/is-admin'),
       );
+      
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return data['isAdmin'] ?? false;
+      }
+      return false;
+    } catch (e) {
+      debugPrint('❌ Error checking admin status: $e');
+      return false;
     }
-    
-    var response = await request.send();
-    return response.statusCode == 200;
-  } catch (e) {
-    debugPrint('❌ Error updating recipe: $e');
-    return false;
   }
-}
+
+// Get user's own recipes
+static Future<List<Map<String, dynamic>>> getUserRecipes(int userId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/users/$userId/recipes'),
+        headers: {'Content-Type': 'application/json'},
+      );
+      
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return List<Map<String, dynamic>>.from(data['recipes'] ?? []);
+      }
+      return [];
+    } catch (e) {
+      debugPrint('❌ Error fetching user recipes: $e');
+      return [];
+    }
+  }
+
+// Update recipe with ownership check
+static Future<bool> updateRecipe(
+    int recipeId,
+    Map<String, dynamic> recipeData,
+    File? imageFile,
+    int userId
+  ) async {
+    try {
+      var request = http.MultipartRequest(
+        'PUT', 
+        Uri.parse('$baseUrl/api/recipes/$recipeId')
+      );
+      
+      // Add user ID for ownership verification
+      request.fields['userId'] = userId.toString();
+      // ... rest of the fields ...
+      
+      var response = await request.send();
+      return response.statusCode == 200;
+    } catch (e) {
+      debugPrint('❌ Error updating recipe: $e');
+      return false;
+    }
+  }
+
+// Delete recipe with ownership check
+static Future<bool> deleteRecipe(int recipeId, int userId) async {
+    try {
+      final response = await http.delete(
+        Uri.parse('$baseUrl/api/recipes/$recipeId'),
+        body: json.encode({
+          'userId': userId,
+        }),
+        headers: {'Content-Type': 'application/json'},
+      );
+      
+      return response.statusCode == 200;
+    } catch (e) {
+      debugPrint('❌ Error deleting recipe: $e');
+      return false;
+    }
+  }
+
+// Get all recipes with edit permissions
+static Future<List<Map<String, dynamic>>> getRecipesWithPermissions(int userId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/recipes/with-permissions?userId=$userId'),
+        headers: {'Content-Type': 'application/json'},
+      );
+      
+      debugPrint('📡 Recipes with permissions: ${response.statusCode}');
+      
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return List<Map<String, dynamic>>.from(data['recipes'] ?? []);
+      }
+      return [];
+    } catch (e) {
+      print('❌ Error fetching recipes with permissions: $e');
+      return [];
+    }
+  }
 
 // Get recipe ownership info (check if user created the recipe)
 static Future<Map<String, dynamic>?> getRecipeOwner(int recipeId) async {

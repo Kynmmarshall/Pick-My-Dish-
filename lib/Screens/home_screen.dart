@@ -870,18 +870,28 @@ class _HomeScreenState extends State<HomeScreen> {
 
                 // Menu Items
                 _buildMenuItem(Icons.home, "Home", () {
-                  Navigator.pop(context);
-                }),
-                const SizedBox(height: 20),
-                _buildMenuItem(Icons.favorite, "Favorites", () {
-                  Navigator.pop(context);
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const FavoritesScreen(),
-                    ),
-                  );
-                }),
+                Navigator.pop(context);
+              }),
+              const SizedBox(height: 20),
+              _buildMenuItem(Icons.restaurant_menu, "My Recipes", () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => RecipesScreen(showUserRecipesOnly: true),
+                  ),
+                );
+              }),
+              const SizedBox(height: 20),
+              _buildMenuItem(Icons.favorite, "Favorites", () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const FavoritesScreen(),
+                  ),
+                );
+              }),
                 const SizedBox(height: 20),
                 _buildMenuItem(Icons.help, "Help", () {
                   Navigator.pop(context);
