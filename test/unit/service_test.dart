@@ -1,6 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pick_my_dish/Services/api_service.dart';
-import 'package:pick_my_dish/Services/database_service.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 void main() {
@@ -68,37 +67,6 @@ test('ApiService methods return correct types', () async {
   for (var method in methods) {
     expect(method, returnsNormally);
   }
-});
-});
-
-group('DatabaseService Tests',skip: true, () {
-test('DatabaseService can be instantiated', () {
-final service = DatabaseService();
-expect(service, isNotNull);
-});
-
-test('Database methods exist',() async {
-  final service = DatabaseService();
-  
-  // Test that methods exist and don't throw on basic calls
-  expect(service.getRecipes, isNotNull);
-  expect(service.getFavoriteRecipes, isNotNull);
-  expect(service.getFilteredRecipes, isNotNull);
-  expect(service.toggleFavorite, isNotNull);
-});
-
-test('Database operations work correctly', () async {
-  final service = DatabaseService();
-  
-  // These should return lists (might be empty if no database)
-  final recipes = await service.getRecipes();
-  expect(recipes, isA<List>());
-  
-  final favorites = await service.getFavoriteRecipes();
-  expect(favorites, isA<List>());
-  
-  final filtered = await service.getFilteredRecipes();
-  expect(filtered, isA<List>());
 });
 });
 }
