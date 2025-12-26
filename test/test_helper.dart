@@ -41,7 +41,6 @@ Widget wrapWithProviders(Widget child) {
     providers: [
       ChangeNotifierProvider(create: (_) => RecipeProvider()),
       ChangeNotifierProvider(create: (_) => UserProvider()),
-      // Add any other providers your app needs
     ],
     child: MaterialApp(
       home: child,
