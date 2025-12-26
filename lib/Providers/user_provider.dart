@@ -1,39 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pick_my_dish/Models/user_model.dart';
 
 class UserProvider with ChangeNotifier {
   User? _user;
   int _userId = 0;
-  String _profilePicture = 'assets/login/noPicture.png';
-  String? _authToken;
-  bool _isCheckingAuth = false;
-
-  // Getters
+  DateTime _joined = DateTime.now();
+  /// Returns the current user, or null if not signed in.
   User? get user => _user;
+  String _profilePicture = 'assets/login/noPicture.png';
   String get profilePicture => _profilePicture;
-  String get username => _user?.username ?? 'Guest';
-  int get userId => _userId;
-  String get email => _user?.email ?? '';
-  String? get profileImage => _user?.profileImage;
-  bool get isLoggedIn => _user != null && _authToken != null;
-  bool get isCheckingAuth => _isCheckingAuth;
-  String? get authToken => _authToken;
+  /// Returns the username of the current user, or a default 'User' string
+  /// when no user is available.
+  String get username => _user?.username ?? 'Guest';  
+  int get userId => _userId;  
 
+  // Add these for complete cleanup
   List<Map<String, dynamic>> _userRecipes = [];
   List<int> _userFavorites = [];
   Map<String, dynamic> _userSettings = {};
-
-  // Initialize and check for saved token
-  Future<void> initialize() async {
-    await _loadSavedAuth();
-  }
-
-  // Load saved authentication from SharedPreferences
-  Future<void> _loadSavedAuth() async {
-    _isCheckingAuth = true;
-    notifyListeners();
 
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -121,6 +106,7 @@ class UserProvider with ChangeNotifier {
     }
   }
 
+  
   /// Set (or replace) the current user and notify listeners.
   void setUser(User user, {Map<String, dynamic>? authData}) {
     _user = user;
@@ -155,22 +141,13 @@ class UserProvider with ChangeNotifier {
     }
   }
 
+
   /// Update the user's profile image and notify listeners.
+  ///
+  /// If there is no current user, this method does nothing.
   void updateProfilePicture(String imagePath) {
     _profilePicture = imagePath;
-    // Update in storage
-    _saveProfilePicture(imagePath);
     notifyListeners();
-  }
-
-  /// Save username to persistent storage
-  Future<void> _saveUsername(String username) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('username', username);
-    } catch (e) {
-      debugPrint('❌ Error saving username: $e');
-    }
   }
 
   /// Save profile picture to persistent storage
@@ -212,25 +189,25 @@ class UserProvider with ChangeNotifier {
       debugPrint('UserProvider: No user logged in');
     } else {
       debugPrint('UserProvider: Current user - ${_user!.toString()}');
-      debugPrint('UserProvider: Username - $username');
-      debugPrint('UserProvider: Token exists - ${_authToken != null}');
+      debugPrint('UserProvider: First name - $username');
     }
   }
-
-  /// Clear ALL user data including persistent storage
+  
+  
+  /// Clear ALL user data
   void clearAllUserData() {
     _user = null;
     _userId = 0;
     _profilePicture = 'assets/login/noPicture.png';
-    _authToken = null;
     _userRecipes = [];
     _userFavorites = [];
     _userSettings = {};
-
+    
     // Clear image cache
     _clearImageCache();
-    // Clear local storage
-    _clearAuthData();
+    
+    // Clear local storage (optional)
+    _clearLocalStorage();
     
     notifyListeners();
   }
@@ -238,16 +215,27 @@ class UserProvider with ChangeNotifier {
   Future<void> _clearImageCache() async {
     try {
       final cacheManager = DefaultCacheManager();
-      // Clear ALL cached images
+      
+      // Clear ALL cached images (more thorough)
       await cacheManager.emptyCache();
-      // Also clear specific profile picture URL if it exists
+      
+      // OR clear only specific profile picture URLs
+      // if you want more targeted clearing:
       if (_profilePicture.startsWith('http')) {
         await cacheManager.removeFile(_profilePicture);
       }
+      
       debugPrint('🗑️ Image cache cleared');
     } catch (e) {
       debugPrint('⚠️ Error clearing cache: $e');
     }
+  }
+
+  Future<void> _clearLocalStorage() async {
+    // Implement local storage clearing if using packages like SharedPreferences
+    // Example:
+    // final prefs = await SharedPreferences.getInstance();
+    // await prefs.clear();
   }
 
   /// Logout - clear everything

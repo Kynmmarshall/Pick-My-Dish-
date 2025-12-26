@@ -20,6 +20,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _passwordController = TextEditingController();
   bool _isLoading = false;
 
+
   void _login() async {
     // Validate inputs
     if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
@@ -41,19 +42,47 @@ class _LoginScreenState extends State<LoginScreen> {
 
     try {
       // Call your backend API
-      final Map<String, dynamic>? response = await ApiService.login(email, password);
+      final Map<String, dynamic>? response = await ApiService.login(
+        _emailController.text.trim(),
+        _passwordController.text,
+      );
+
+      // if (response != null && response['user'] != null) {
+      //   final userProvider = Provider.of<UserProvider>(context, listen: false);
+        
+      //   // Use the actual user data from API
+      //   userProvider.setUser(User.fromJson(response['user']));
+      //   userProvider.setUserId(response['userId'] ?? 0);
+      //   if (context.mounted) {
+      //     Navigator.pushReplacement(
+      //       context, 
+      //       MaterialPageRoute(builder: (context) => HomeScreen())
+      //     );
+      //   }
+      // } else {
+      //   // Handle error
+      //   final errorMessage = response?['error'] ?? 'Login failed';
+      //     ScaffoldMessenger.of(context).showSnackBar(
+      //       SnackBar(
+      //         content: Text(errorMessage, style: text),
+      //         backgroundColor: Colors.red,
+      //       ),
+      //     );
+      //   }
 
       if (response != null && response['user'] != null) {
-        // Login successful
-        final userProvider = Provider.of<UserProvider>(context, listen: false);
-        
-        // Pass token and user data to provider
-        userProvider.setUserFromJson(
-          response['user'],
-          authData: {
-            'token': response['token'],
-            'userId': response['userId'] ?? 0,
-          },
+        // Login successful - navigate to home
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
+      
+      // Use the actual user data from API
+      userProvider.setUser(User.fromJson(response['user']));
+      // Store the user ID from login response
+      userProvider.setUserId(response['userId'] ?? 0);
+      
+      if (context.mounted) {
+        Navigator.pushReplacement(
+          context, 
+          MaterialPageRoute(builder: (context) => HomeScreen())
         );
         
         // Initialize API service with token
@@ -70,7 +99,8 @@ class _LoginScreenState extends State<LoginScreen> {
         }
       } else {
         // Login failed
-        final errorMessage = response?['error'] ?? 'Invalid email or password';
+        // Hide loading
+        Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(errorMessage, style: text),
@@ -218,7 +248,12 @@ class _LoginScreenState extends State<LoginScreen> {
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
                           GestureDetector(
-                            onTap: _loginAsGuest,
+                            onTap: () {
+                              Navigator.pushReplacement(
+                              context, 
+                              MaterialPageRoute(builder: (context) => HomeScreen())
+                            );
+                            },
                             child: Text(
                               "Login As Guest",
                               style: footerClickable,

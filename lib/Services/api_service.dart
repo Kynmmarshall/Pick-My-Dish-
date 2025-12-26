@@ -1,9 +1,8 @@
-import 'dart:convert';
+import 'dart:convert';  // For JSON encoding/decoding
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:pick_my_dish/Providers/user_provider.dart';
-import 'package:provider/provider.dart';
+
 
 class ApiService {
   // Backend server base URL
@@ -50,8 +49,9 @@ class ApiService {
     }
   }
 
-  // Login user - MODIFIED to return token
-  static Future<Map<String, dynamic>?> login(String email, String password) async {
+
+  //login user
+  static Future<Map<String, dynamic>?>  login(String email, String password) async {
     try {
       debugPrint('🔐 Attempting login for: $email');
       
@@ -60,10 +60,9 @@ class ApiService {
         body: json.encode({'email': email, 'password': password}),
         headers: {'Content-Type': 'application/json'},
       );
-
-      debugPrint('📡 Login Response Status: ${response.statusCode}');
-      debugPrint('📡 Login Response Body: ${response.body}');
-      
+      final errorData = json.decode(response.body);
+      // ADD THIS DEBUG LINE:
+      debugPrint('Login Response: ${response.body}');
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         debugPrint('✅ Login successful: ${data['message']}');
@@ -128,11 +127,13 @@ class ApiService {
     }
   }
 
-  static Future<void> testAuth() async {
-    debugPrint('🔐 Testing authentication...');
-    bool registered = await register('Test User', 'test@example.com', 'password123');
-    debugPrint(registered ? '✅ Registration successful' : '❌ Registration failed');
-  }
+static Future<void> testAuth() async {
+  debugPrint('🔐 Testing authentication...');
+  
+  // Test Registration
+  bool registered = await register('Test User', 'test@example.com', 'password123');
+  debugPrint(registered ? '✅ Registration successful' : '❌ Registration failed');
+  
 
   static Future<void> testBaseUrl() async {
     try {
@@ -194,52 +195,73 @@ class ApiService {
     }
   }
 
-  // Get profile picture - MODIFIED to use token
-  static Future<String?> getProfilePicture(int userId) async {
-    try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/api/users/profile-picture?userId=$userId'),
-        headers: _getHeaders(), // Use token headers
-      );
-      
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        return data['imagePath'];
-      } else {
-        print('❌ Failed to get profile picture: ${response.statusCode}');
-        return null;
-      }
-    } catch (e) {
-      print('❌ Error getting profile picture: $e');
+//update profile picture
+static Future<bool> uploadProfilePicture(File imageFile, int userId) async {
+  try {
+    var request = http.MultipartRequest(
+      'PUT', 
+      Uri.parse('$baseUrl/api/users/profile-picture')
+    );
+    
+    request.files.add(
+      await http.MultipartFile.fromPath('image', imageFile.path)
+    );
+    
+    // Add user ID to request
+    request.fields['userId'] = userId.toString();
+    
+    var response = await request.send();
+    return response.statusCode == 200;
+  } catch (e) {
+    return false;
+  }
+}
+
+//Get profile picture
+static Future<String?> getProfilePicture(int userId) async {
+  try {
+    final response = await http.get(
+      Uri.parse('$baseUrl/api/users/profile-picture?userId=$userId')
+    );
+    
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      return data['imagePath']; // Returns the image path from database
+    } else {
+      print('❌ Failed to get profile picture: ${response.statusCode}');
       return null;
     }
+  } catch (e) {
+    print('❌ Error getting profile picture: $e');
+    return null;
   }
+}
 
-  // Get all recipes - MODIFIED to use token
-  static Future<List<Map<String, dynamic>>> getRecipes() async {
-    try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/api/recipes'),
-        headers: _getHeaders(), // Use token headers
-      );
-      
-      debugPrint('📡 Recipes endpoint: ${response.statusCode}');
-      
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        return List<Map<String, dynamic>>.from(data['recipes'] ?? []);
-      } else {
-        print('❌ Failed to fetch recipes: ${response.statusCode}');
-        return [];
-      }
-    } catch (e) {
-      print('❌ Error fetching recipes: $e');
+// Get all recipes
+static Future<List<Map<String, dynamic>>> getRecipes() async {
+  try {
+    final response = await http.get(
+      Uri.parse('$baseUrl/api/recipes'),
+      headers: {'Content-Type': 'application/json'},
+    );
+    
+    debugPrint('📡 Recipes endpoint: ${response.statusCode}'); 
+    debugPrint('📡 Response body: ${response.body}');
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      return List<Map<String, dynamic>>.from(data['recipes'] ?? []);
+    } else {
+      print('❌ Failed to fetch recipes: ${response.statusCode}');
       return [];
     }
+  } catch (e) {
+    print('❌ Error fetching recipes: $e');
+    return [];
   }
-
-  // Upload recipe with image - MODIFIED to use token
-  static Future<bool> uploadRecipe(Map<String, dynamic> recipeData, File? imageFile) async {
+}
+  
+// Upload recipe with image
+static Future<bool> uploadRecipe(Map<String, dynamic> recipeData, File? imageFile) async {
     try {
       var request = http.MultipartRequest('POST', Uri.parse('$baseUrl/api/recipes'));
       
@@ -256,17 +278,13 @@ class ApiService {
       request.fields['emotions'] = json.encode(emotions);
       
       print('📤 Sending emotions: $emotions');
-      
+      print('📤 Encoded emotions: ${json.encode(emotions)}');
+
       // Add image if exists
       if (imageFile != null) {
         request.files.add(
           await http.MultipartFile.fromPath('image', imageFile.path)
         );
-      }
-      
-      // Add authorization header if token exists
-      if (_authToken != null) {
-        request.headers['Authorization'] = 'Bearer $_authToken';
       }
       
       var response = await request.send();
@@ -277,124 +295,122 @@ class ApiService {
     }
   }
 
-  // Method to get ingredients - MODIFIED to use token
-  static Future<List<Map<String, dynamic>>> getIngredients() async {
-    try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/api/ingredients'),
-        headers: _getHeaders(), // Use token headers
-      );
-      
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        return List<Map<String, dynamic>>.from(data['ingredients'] ?? []);
-      }
-      return [];
-    } catch (e) {
-      print('❌ Error getting ingredients: $e');
-      return [];
-    }
-  }
-
-  // Method to create new ingredient - MODIFIED to use token
-  static Future<bool> addIngredient(String name) async {
-    try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/api/ingredients'),
-        body: json.encode({'name': name}),
-        headers: _getHeaders(), // Use token headers
-      );
-      return response.statusCode == 201;
-    } catch (e) {
-      print('❌ Error adding ingredient: $e');
-      return false;
-    }
-  }
-
-  // Get user's favorite recipes - MODIFIED to use token
-  static Future<List<Map<String, dynamic>>> getUserFavorites(int userId) async {
-    try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/api/users/$userId/favorites'),
-        headers: _getHeaders(), // Use token headers
-      );
-      
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        return List<Map<String, dynamic>>.from(data['favorites'] ?? []);
-      }
-      return [];
-    } catch (e) {
-      debugPrint('❌ Error fetching favorites: $e');
-      return [];
-    }
-  }
-
-  // Add recipe to favorites - MODIFIED to use token
-  static Future<bool> addToFavorites(int userId, int recipeId) async {
-    debugPrint('📤 API: Adding favorite - User: $userId, Recipe: $recipeId');
+//method to get ingredients
+static Future<List<Map<String, dynamic>>> getIngredients() async {
+  try {
+    final response = await http.get(
+      Uri.parse('$baseUrl/api/ingredients'),
+      headers: {'Content-Type': 'application/json'},
+    );
     
-    try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/api/users/favorites'),
-        body: json.encode({
-          'userId': userId,
-          'recipeId': recipeId,
-        }),
-        headers: _getHeaders(), // Use token headers
-      );
-      
-      return response.statusCode == 201;
-    } catch (e) {
-      debugPrint('❌ Error adding to favorites: $e');
-      return false;
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      return List<Map<String, dynamic>>.from(data['ingredients'] ?? []);
     }
+    return [];
+  } catch (e) {
+    print('❌ Error getting ingredients: $e');
+    return [];
   }
+}
 
-  // Remove recipe from favorites - MODIFIED to use token
-  static Future<bool> removeFromFavorites(int userId, int recipeId) async {
-    try {
-      final response = await http.delete(
-        Uri.parse('$baseUrl/api/users/favorites'),
-        body: json.encode({
-          'userId': userId,
-          'recipeId': recipeId,
-        }),
-        headers: _getHeaders(), // Use token headers
-      );
-      
-      return response.statusCode == 200;
-    } catch (e) {
-      debugPrint('❌ Error removing from favorites: $e');
-      return false;
+//method to create new ingredient
+static Future<bool> addIngredient(String name) async {
+  try {
+    final response = await http.post(
+      Uri.parse('$baseUrl/api/ingredients'),
+      body: json.encode({'name': name}),
+      headers: {'Content-Type': 'application/json'},
+    );
+    return response.statusCode == 201;
+  } catch (e) {
+    print('❌ Error adding ingredient: $e');
+    return false;
+  }
+}
+
+// Get user's favorite recipes
+static Future<List<Map<String, dynamic>>> getUserFavorites(int userId) async {
+  try {
+    final response = await http.get(
+      Uri.parse('$baseUrl/api/users/$userId/favorites'),
+      headers: {'Content-Type': 'application/json'},
+    );
+    
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      return List<Map<String, dynamic>>.from(data['favorites'] ?? []);
     }
+    return [];
+  } catch (e) {
+    debugPrint('❌ Error fetching favorites: $e');
+    return [];
   }
+}
 
-  // Check if recipe is favorited by user - MODIFIED to use token
-  static Future<bool> isRecipeFavorited(int userId, int recipeId) async {
-    try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/api/users/favorites/check?userId=$userId&recipeId=$recipeId'),
-        headers: _getHeaders(), // Use token headers
-      );
-      
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        return data['isFavorited'] ?? false;
-      }
-      return false;
-    } catch (e) {
-      debugPrint('❌ Error checking favorite status: $e');
-      return false;
+// Add recipe to favorites
+static Future<bool> addToFavorites(int userId, int recipeId) async {
+  debugPrint('📤 API: Adding favorite - User: $userId, Recipe: $recipeId');
+  debugPrint('📤 URL: $baseUrl/api/users/favorites');
+  try {
+    final response = await http.post(
+      Uri.parse('$baseUrl/api/users/favorites'),
+      body: json.encode({
+        'userId': userId,
+        'recipeId': recipeId,
+      }),
+      headers: {'Content-Type': 'application/json'},
+    );
+    
+    return response.statusCode == 201;
+  } catch (e) {
+    debugPrint('❌ Error adding to favorites: $e');
+    return false;
+  }
+}
+
+// Remove recipe from favorites
+static Future<bool> removeFromFavorites(int userId, int recipeId) async {
+  try {
+    final response = await http.delete(
+      Uri.parse('$baseUrl/api/users/favorites'),
+      body: json.encode({
+        'userId': userId,
+        'recipeId': recipeId,
+      }),
+      headers: {'Content-Type': 'application/json'},
+    );
+    
+    return response.statusCode == 200;
+  } catch (e) {
+    debugPrint('❌ Error removing from favorites: $e');
+    return false;
+  }
+}
+
+// Check if recipe is favorited by user
+static Future<bool> isRecipeFavorited(int userId, int recipeId) async {
+  try {
+    final response = await http.get(
+      Uri.parse('$baseUrl/api/users/favorites/check?userId=$userId&recipeId=$recipeId'),
+    );
+    
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      return data['isFavorited'] ?? false;
     }
+    return false;
+  } catch (e) {
+    debugPrint('❌ Error checking favorite status: $e');
+    return false;
   }
+}
 
-  // Check if user is admin - MODIFIED to use token
-  static Future<bool> isUserAdmin(int userId) async {
+// Check if user is admin
+static Future<bool> isUserAdmin(int userId) async {
     try {
       final response = await http.get(
         Uri.parse('$baseUrl/api/users/$userId/is-admin'),
-        headers: _getHeaders(), // Use token headers
       );
       
       if (response.statusCode == 200) {
@@ -408,12 +424,12 @@ class ApiService {
     }
   }
 
-  // Get user's own recipes - MODIFIED to use token
-  static Future<List<Map<String, dynamic>>> getUserRecipes(int userId) async {
+// Get user's own recipes
+static Future<List<Map<String, dynamic>>> getUserRecipes(int userId) async {
     try {
       final response = await http.get(
         Uri.parse('$baseUrl/api/users/$userId/recipes'),
-        headers: _getHeaders(), // Use token headers
+        headers: {'Content-Type': 'application/json'},
       );
       
       if (response.statusCode == 200) {
@@ -427,71 +443,74 @@ class ApiService {
     }
   }
 
-  // Update recipe with ownership check - MODIFIED to use token
-  static Future<bool> updateRecipe(
-    int recipeId,
-    Map<String, dynamic> recipeData,
-    File? imageFile,
-    int userId
-  ) async {
-    debugPrint('📤 API: updateRecipe called');
+// Update recipe with ownership check
+static Future<bool> updateRecipe(
+  int recipeId,
+  Map<String, dynamic> recipeData,
+  File? imageFile,
+  int userId
+) async {
+  debugPrint('📤 API: updateRecipe called');
+  debugPrint('   Recipe ID: $recipeId');
+  debugPrint('   User ID: $userId');
+  debugPrint('   Data: $recipeData');
+  debugPrint('   Has image: ${imageFile != null}');
+  
+  try {
+    var request = http.MultipartRequest(
+      'PUT', 
+      Uri.parse('$baseUrl/api/recipes/$recipeId')
+    );
     
-    try {
-      var request = http.MultipartRequest(
-        'PUT',
-        Uri.parse('$baseUrl/api/recipes/$recipeId')
+    // Add recipe data
+    request.fields['userId'] = userId.toString();
+    request.fields['name'] = recipeData['name'];
+    request.fields['category'] = recipeData['category'];
+    request.fields['time'] = recipeData['time'];
+    request.fields['calories'] = recipeData['calories'];
+    request.fields['ingredients'] = json.encode(recipeData['ingredients']);
+    request.fields['instructions'] = json.encode(recipeData['instructions']);
+    
+    final emotions = recipeData['emotions'] ?? [];
+    request.fields['emotions'] = json.encode(emotions);
+    
+    debugPrint('📤 Fields:');
+    request.fields.forEach((key, value) {
+      debugPrint('   $key: $value');
+    });
+    
+    // Add image if exists
+    if (imageFile != null) {
+      debugPrint('📸 Adding image file: ${imageFile.path}');
+      request.files.add(
+        await http.MultipartFile.fromPath('image', imageFile.path)
       );
-      
-      // Add recipe data
-      request.fields['userId'] = userId.toString();
-      request.fields['name'] = recipeData['name'];
-      request.fields['category'] = recipeData['category'];
-      request.fields['time'] = recipeData['time'];
-      request.fields['calories'] = recipeData['calories'];
-      request.fields['ingredients'] = json.encode(recipeData['ingredients']);
-      request.fields['instructions'] = json.encode(recipeData['instructions']);
-      
-      final emotions = recipeData['emotions'] ?? [];
-      request.fields['emotions'] = json.encode(emotions);
-      
-      // Add image if exists
-      if (imageFile != null) {
-        debugPrint('📸 Adding image file: ${imageFile.path}');
-        request.files.add(
-          await http.MultipartFile.fromPath('image', imageFile.path)
-        );
-      }
-      
-      // Add authorization header if token exists
-      if (_authToken != null) {
-        request.headers['Authorization'] = 'Bearer $_authToken';
-      }
-      
-      debugPrint('🚀 Sending request to: $baseUrl/api/recipes/$recipeId');
-      var response = await request.send();
-      var responseBody = await response.stream.bytesToString();
-      
-      debugPrint('📡 Update response status: ${response.statusCode}');
-      debugPrint('📡 Update response body: $responseBody');
-      
-      return response.statusCode == 200;
-    } catch (e) {
-      debugPrint('❌ Error updating recipe: $e');
-      return false;
     }
-  }
 
-  // Delete recipe with ownership check - MODIFIED to use token
-  static Future<bool> deleteRecipe(int recipeId, int userId) async {
-    debugPrint('📤 API: deleteRecipe called - recipeId: $recipeId, userId: $userId');
+    debugPrint('🚀 Sending request to: $baseUrl/api/recipes/$recipeId');
+    var response = await request.send();
+    var responseBody = await response.stream.bytesToString();
     
+    debugPrint('📡 Update response status: ${response.statusCode}');
+    debugPrint('📡 Update response body: $responseBody');
+    
+    return response.statusCode == 200;
+  } catch (e) {
+    debugPrint('❌ Error updating recipe: $e');
+    return false;
+  }
+}
+
+// Delete recipe with ownership check
+static Future<bool> deleteRecipe(int recipeId, int userId) async {
+    debugPrint('📤 API: deleteRecipe called - recipeId: $recipeId, userId: $userId');
     try {
       final response = await http.delete(
         Uri.parse('$baseUrl/api/recipes/$recipeId'),
         body: json.encode({
           'userId': userId,
         }),
-        headers: _getHeaders(), // Use token headers
+        headers: {'Content-Type': 'application/json'},
       );
       
       return response.statusCode == 200;
@@ -501,12 +520,12 @@ class ApiService {
     }
   }
 
-  // Get all recipes with permissions - MODIFIED to use token
-  static Future<List<Map<String, dynamic>>> getRecipesWithPermissions(int userId) async {
+// Get all recipes with edit permissions
+static Future<List<Map<String, dynamic>>> getRecipesWithPermissions(int userId) async {
     try {
       final response = await http.get(
         Uri.parse('$baseUrl/api/recipes/with-permissions?userId=$userId'),
-        headers: _getHeaders(), // Use token headers
+        headers: {'Content-Type': 'application/json'},
       );
       
       debugPrint('📡 Recipes with permissions: ${response.statusCode}');
@@ -522,30 +541,31 @@ class ApiService {
     }
   }
 
-  // Get recipe ownership info - MODIFIED to use token
-  static Future<Map<String, dynamic>?> getRecipeOwner(int recipeId) async {
-    try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/api/recipes/$recipeId/owner'),
-        headers: _getHeaders(), // Use token headers
-      );
-      
-      if (response.statusCode == 200) {
-        return json.decode(response.body);
-      }
-      return null;
-    } catch (e) {
-      debugPrint('❌ Error getting recipe owner: $e');
-      return null;
+// Get recipe ownership info (check if user created the recipe)
+static Future<Map<String, dynamic>?> getRecipeOwner(int recipeId) async {
+  try {
+    final response = await http.get(
+      Uri.parse('$baseUrl/api/recipes/$recipeId/owner'),
+    );
+    
+    if (response.statusCode == 200) {
+      return json.decode(response.body);
     }
+    return null;
+  } catch (e) {
+    debugPrint('❌ Error getting recipe owner: $e');
+    return null;
   }
+}
+
 
   static Future<void> testRecipeUpload() async {
-    try {
-      final response = await http.get(Uri.parse('$baseUrl/api/recipes'));
-      debugPrint('Recipes endpoint: ${response.statusCode}');
-    } catch (e) {
-      debugPrint('Recipes endpoint error: $e');
-    }
+  try {
+    final response = await http.get(Uri.parse('$baseUrl/api/recipes'));
+    debugPrint('Recipes endpoint: ${response.statusCode}');
+  } catch (e) {
+    debugPrint('Recipes endpoint error: $e');
   }
+}
+
 }

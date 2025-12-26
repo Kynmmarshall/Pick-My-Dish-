@@ -1,62 +1,33 @@
 import 'package:flutter/material.dart';
+import 'package:pick_my_dish/Models/recipe_model.dart';
+import 'package:pick_my_dish/Providers/recipe_provider.dart'; // Add this
+import 'package:pick_my_dish/Providers/user_provider.dart';
+import 'package:pick_my_dish/Screens/favorite_screen.dart';
+import 'package:pick_my_dish/Screens/recipe_edit_screen.dart';
+import 'package:pick_my_dish/Screens/recipe_upload_screen.dart';
+import 'package:pick_my_dish/Services/api_service.dart';
 import 'package:pick_my_dish/constants.dart';
 import 'package:pick_my_dish/Screens/recipe_detail_screen.dart';
+import 'package:pick_my_dish/widgets/cached_image.dart';
+import 'package:provider/provider.dart'; // Add this
 
 class RecipesScreen extends StatefulWidget {
-  const RecipesScreen({super.key});
+  final bool showUserRecipesOnly; // Add this parameter
+  
+  const RecipesScreen({
+    super.key,
+    this.showUserRecipesOnly = false,
+  });
 
   @override
   State<RecipesScreen> createState() => RecipesScreenState();
 }
 
 class RecipesScreenState extends State<RecipesScreen> {
-  static List<Map<String, dynamic>> allRecipes = [
-    {
-      'category': 'Breakfast',
-      'name': 'Toast with Berries',
-      'time': '10 mins',
-      'isFavorite': false,
-      'image': 'assets/recipes/test.png',
-      'calories': '350',
-      'ingredients': [
-        '2 slices of whole wheat bread',
-        '1 cup mixed berries',
-        '1 tbsp honey',
-        '1 tsp butter'
-      ],
-      'steps': [
-        'Toast the bread until golden brown',
-        'Wash and prepare the berries',
-        'Spread butter on toast',
-        'Top with berries and drizzle with honey'
-      ],
-      'mood': ['Quick', 'Healthy', 'Light']
-    },
-    {
-      'category': 'Dinner',
-      'name': 'Chicken Burger',
-      'time': '25 mins',
-      'isFavorite': true,
-      'image': 'assets/recipes/test.png',
-      'calories': '450',
-      'ingredients': [
-        '1 chicken breast',
-        '1 burger bun',
-        'Lettuce leaves',
-        'Tomato slices',
-        'Cheese slice',
-        'Burger sauce'
-      ],
-      'steps': [
-        'Grill the chicken breast until cooked',
-        'Toast the burger bun',
-        'Assemble with lettuce, tomato, and cheese',
-        'Add sauce and serve'
-      ],
-      'mood': ['Comfort', 'Energetic']
-    },
-    // Add more recipes here...
-  ];
+  List<Recipe> allRecipes = [];
+  bool isLoading = true;
+  bool hasError = false;
+  String header = "All Recipes";
 
   String searchQuery = '';
   TextEditingController searchController = TextEditingController();
@@ -65,6 +36,33 @@ class RecipesScreenState extends State<RecipesScreen> {
   void initState() {
     super.initState();
     searchController.addListener(_onSearchChanged);
+    _loadRecipes();
+  }
+
+  Future<void> _loadRecipes() async {
+    try {
+      final recipeMaps = await ApiService.getRecipes(); // This returns List<Map>
+      var recipes = recipeMaps.map((map) => Recipe.fromJson(map)).toList();
+      
+      // Filter user's recipes if needed
+      if (widget.showUserRecipesOnly) {
+        header = "My Recipes";
+        final userProvider = Provider.of<UserProvider>(context, listen: false);
+        recipes = recipes.where((recipe) => recipe.userId == userProvider.userId).toList();
+      }
+
+      setState(() {
+        allRecipes = recipes;
+        isLoading = false;
+        hasError = false;
+      });
+    } catch (e) {
+      print('❌ Error loading recipes: $e');
+      setState(() {
+        isLoading = false;
+        hasError = true;
+      });
+    }
   }
 
   void _onSearchChanged() {
@@ -73,19 +71,19 @@ class RecipesScreenState extends State<RecipesScreen> {
     });
   }
 
-  List<Map<String, dynamic>> get filteredRecipes {
+  List<Recipe> get filteredRecipes {
     if (searchQuery.isEmpty) return allRecipes;
     return allRecipes.where((recipe) {
-      return recipe['name'].toLowerCase().contains(searchQuery) ||
-          recipe['category'].toLowerCase().contains(searchQuery);
+      return recipe.name.toLowerCase().contains(searchQuery) ||
+          recipe.category.toLowerCase().contains(searchQuery);
     }).toList();
   }
 
-  void _showRecipeDetails(Map<String, dynamic> recipe) {
+  void _showRecipeDetails(Recipe recipe) {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => RecipeDetailScreen(recipe: recipe),
+        builder: (context) => RecipeDetailScreen(initialRecipe: recipe),
       ),
     );
   }
@@ -100,6 +98,58 @@ class RecipesScreenState extends State<RecipesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.orange), iconSize: iconSize,
+          onPressed: () => Navigator.pop(context),
+        ),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(top: 10, right: 20),
+            child: Row(
+              children: [
+                // Add Recipe Button
+                GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const RecipeUploadScreen(),
+                      ),
+                    );
+                  },
+                  child: const Icon(
+                    Icons.add_circle,
+                    color: Colors.orange,
+                    size: iconSize,
+                  ),
+                ),
+                const SizedBox(width: 20),
+
+                // Favorites Icon
+                GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const FavoritesScreen(),
+                      ),
+                    );
+                  },
+                  child: const Icon(
+                    Icons.favorite_outlined,
+                    color: Colors.orange,
+                    size: iconSize,
+                  ),
+                ),
+                const SizedBox(width: 10), // Adjust spacing
+              ],
+            ),
+          ),
+        ],
+      ),
       body: Container(
         width: double.infinity,
         height: double.infinity,
@@ -108,20 +158,11 @@ class RecipesScreenState extends State<RecipesScreen> {
           padding: const EdgeInsets.all(30),
           child: Column(
             children: [
-              SizedBox(height: 50),
               // Header with title and back button
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text("All Recipes", style: title.copyWith(fontSize: 28)),
-                  GestureDetector(
-                    onTap: () => Navigator.pop(context),
-                    child: Icon(
-                      Icons.arrow_back,
-                      color: Colors.orange,
-                      size: iconSize,
-                    ),
-                  ),
+                  Text(header, style: title.copyWith(fontSize: 28)),
                 ],
               ),
               SizedBox(height: 20),
@@ -140,12 +181,8 @@ class RecipesScreenState extends State<RecipesScreen> {
                     SizedBox(width: 10),
                     Expanded(
                       child: TextField(
+                        controller: searchController,
                         style: text,
-                        onChanged: (value) {
-                          setState(() {
-                            searchQuery = value.toLowerCase();
-                          });
-                        },
                         decoration: InputDecoration(
                           hintText: "Search recipes...",
                           hintStyle: placeHolder,
@@ -165,35 +202,77 @@ class RecipesScreenState extends State<RecipesScreen> {
               ),
               SizedBox(height: 30),
 
-              // Recipes Grid
+              // Loading/Error/Recipes
               Expanded(
-                child: filteredRecipes.isEmpty
-                    ? Center(child: Text("No recipes found", style: title))
-                    : GridView.builder(
-                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          crossAxisSpacing: 15,
-                          mainAxisSpacing: 15,
-                          childAspectRatio: 0.8,
-                        ),
-                        itemCount: filteredRecipes.length,
-                        itemBuilder: (context, index) {
-                          return buildRecipeCard(filteredRecipes[index]);
-                        },
-                      ),
+                child: _buildContent(),
               ),
             ],
           ),
         ),
       ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _loadRecipes,
+        backgroundColor: Colors.orange,
+        child: Icon(Icons.refresh),
+      ),
     );
   }
 
-  Widget buildRecipeCard(Map<String, dynamic> recipe) {
-    return GestureDetector(
-      onTap: () {
-        _showRecipeDetails(recipe);
+  Widget _buildContent() {
+    if (isLoading) {
+      return Center(child: CircularProgressIndicator(color: Colors.orange));
+    }
+    
+    if (hasError) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.error, color: Colors.red, size: 50),
+            SizedBox(height: 20),
+            Text('Failed to load recipes', style: text),
+            SizedBox(height: 10),
+            ElevatedButton(
+              onPressed: _loadRecipes,
+              child: Text('Retry'),
+            ),
+          ],
+        ),
+      );
+    }
+    
+    if (filteredRecipes.isEmpty) {
+      return Center(
+        child: Text(
+          searchQuery.isEmpty ? 'No recipes available' : 'No recipes found',
+          style: title,
+        ),
+      );
+    }
+    
+    return GridView.builder(
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: 15,
+        mainAxisSpacing: 15,
+        childAspectRatio: 0.8,
+      ),
+      itemCount: filteredRecipes.length,
+      itemBuilder: (context, index) {
+        return buildRecipeCard(filteredRecipes[index]);
       },
+    );
+  }
+
+  Widget buildRecipeCard(Recipe recipe) {
+    final recipeProvider = Provider.of<RecipeProvider>(context);
+    final userProvider = Provider.of<UserProvider>(context);
+    bool isFavorite = recipeProvider.isFavorite(recipe.id);
+    final isAdmin = userProvider.user?.isAdmin ?? false;
+    final canEdit = recipe.canUserEdit(userProvider.userId, isAdmin);
+    
+    return GestureDetector(
+      onTap: () => _showRecipeDetails(recipe),
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white.withOpacity(0.1),
@@ -201,35 +280,33 @@ class RecipesScreenState extends State<RecipesScreen> {
         ),
         child: Stack(
           children: [
-            // Recipe Image
+            // Recipe Image from VPS database
             Positioned(
-              top: 20,
-              right: 10,
+              top: 5,
+              right: 5,
               child: Container(
                 width: 99,
                 height: 87,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(24),
-                  image: DecorationImage(
-                    image: AssetImage(recipe['image']),
-                    fit: BoxFit.cover,
-                  ),
+                child: CachedProfileImage(
+                  imagePath: recipe.imagePath, // Use Recipe property
+                  radius: 0,
+                  isProfilePicture: false,
+                  width: 99,
+                  height: 87,
+                  fit: BoxFit.cover,
                 ),
               ),
             ),
-
             // Favorite Icon
             Positioned(
               top: 10,
               left: 10,
               child: GestureDetector(
                 onTap: () {
-                  setState(() {
-                    recipe['isFavorite'] = !recipe['isFavorite'];
-                  });
+                  _toggleFavorite(recipe);
                 },
                 child: Icon(
-                  recipe['isFavorite'] ? Icons.favorite : Icons.favorite_border,
+                  isFavorite ? Icons.favorite : Icons.favorite_border, // Use Recipe property
                   color: Colors.orange,
                   size: iconSize,
                 ),
@@ -245,7 +322,7 @@ class RecipesScreenState extends State<RecipesScreen> {
                 children: [
                   // Category
                   Text(
-                    recipe['category'],
+                    recipe.category, // Use Recipe property
                     style: categoryText.copyWith(
                       color: Color(0xFF2958FF),
                       fontSize: 15,
@@ -254,7 +331,12 @@ class RecipesScreenState extends State<RecipesScreen> {
                   SizedBox(height: 5),
 
                   // Recipe Name
-                  Text(recipe['name'], style: text.copyWith(fontSize: 17)),
+                  Text(
+                    recipe.name, // Use Recipe property
+                    style: text.copyWith(fontSize: 17),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                   SizedBox(height: 10),
 
                   // Time with Icon
@@ -263,7 +345,7 @@ class RecipesScreenState extends State<RecipesScreen> {
                       Icon(Icons.access_time, color: Colors.white, size: 16),
                       SizedBox(width: 5),
                       Text(
-                        recipe['time'],
+                        recipe.cookingTime, // Use Recipe property
                         style: TextStyle(
                           color: Colors.orange,
                           fontSize: 13,
@@ -281,4 +363,31 @@ class RecipesScreenState extends State<RecipesScreen> {
       ),
     );
   }
+
+  void _toggleFavorite(Recipe recipe) {
+    final recipeProvider = Provider.of<RecipeProvider>(context, listen: false);
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    
+    recipeProvider.toggleFavorite(userProvider.userId, recipe.id);
+    
+    // Update local state if needed
+    setState(() {
+      final index = allRecipes.indexWhere((r) => r.id == recipe.id);
+      if (index != -1) {
+        allRecipes[index] = allRecipes[index].copyWith(
+          isFavorite: !allRecipes[index].isFavorite
+        );
+      }
+    });
+  }
+  
+  void _editRecipe(Recipe recipe) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => RecipeEditScreen(recipe: recipe),
+      ),
+    );
+  }
+
 }

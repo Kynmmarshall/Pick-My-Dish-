@@ -1,5 +1,4 @@
-// main.dart - UPDATED VERSION WITH PERSISTENT LOGIN
-
+// main.dart - SIMPLER VERSION
 import 'package:flutter/material.dart';
 import 'package:pick_my_dish/Providers/recipe_provider.dart';
 import 'package:pick_my_dish/Providers/user_provider.dart';
@@ -9,7 +8,6 @@ import 'package:pick_my_dish/Screens/home_screen.dart';
 import 'package:pick_my_dish/Screens/login_screen.dart';
 
 void main() {
-  WidgetsFlutterBinding.ensureInitialized();
   runApp(
     MultiProvider(
       providers: [
