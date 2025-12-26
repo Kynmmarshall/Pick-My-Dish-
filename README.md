@@ -1,5 +1,5 @@
 #pick_my_dish.
-what should i eat today
+what should i eat today.
 
 
 This project is a starting point for a Flutter application.
