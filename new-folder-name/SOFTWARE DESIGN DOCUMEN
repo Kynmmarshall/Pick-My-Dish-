@@ -1,0 +1,412 @@
+% PickMyDish_System_Design.tex
+\documentclass[12pt,a4paper]{report}
+\usepackage[utf8]{inputenc}
+\usepackage{geometry}
+\usepackage{hyperref}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+\usepackage{setspace}
+\usepackage{caption}
+\usepackage{verbatim}
+\usepackage{graphicx}
+\usepackage{color}
+
+\geometry{margin=1in}
+\setstretch{1.15}
+\titleformat{\chapter}{\Large\bfseries}{\thechapter.}{0.5em}{}
+\titleformat{\section}{\large\bfseries}{\thesection}{0.5em}{}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{PickMyDish — System Design}
+\fancyhead[R]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+\begin{document}
+
+\begin{titlepage}
+    \centering
+    {\Huge \bfseries System Design Document}\\[0.6cm]
+    {\Large \bfseries PickMyDish: What Should I Eat Today?}\\[1.2cm]
+    {\Large Prepared by: \underline{Project Team}}\\[0.3cm]
+    {\large Course: Software Design and Modelling}\\[2.0cm]
+    {\large Version: 1.0}\\[0.1cm]
+    {\large Date: \today}
+    \vfill
+\end{titlepage}
+
+\tableofcontents
+\listoffigures
+\newpage
+
+\chapter{Introduction}
+\section{Purpose}
+This System Design Document (SDD) describes the architecture and design decisions for the PickMyDish mobile application. It translates requirements from the SRS into a technical blueprint for developers and system integrators.
+
+\section{Scope}
+The document covers:
+\begin{itemize}
+  \item High-level architecture and component decomposition
+  \item Data model and database schema
+  \item API design and contracts
+  \item Detailed component behavior (sequence diagrams)
+  \item Deployment and scaling strategies
+  \item Security, caching & offline sync design
+  \item Observability, testing and CI/CD guidance
+\end{itemize}
+
+\chapter{Design Goals and Constraints}
+\section{Design Goals}
+\begin{itemize}
+  \item Modularity and separation of concerns (clean architecture).
+  \item Responsive UX and quick recipe suggestion generation.
+  \item Offline capability with local persistence and sync.
+  \item Easy to maintain and extensible (new features, ML-based recommendations).
+  \item Secure handling of user credentials and media uploads.
+\end{itemize}
+
+\section{Constraints}
+\begin{itemize}
+  \item Mobile-first: Flutter for Android and iOS.
+  \item Backend API base URL initially fixed: \texttt{http://38.242.246.126:3000}.
+  \item Local persistence: SQLite via sqflite package.
+  \item Use Provider for state management.
+\end{itemize}
+
+\chapter{High-level Architecture}
+\section{Architectural Pattern}
+We adopt a layered Clean Architecture:
+\begin{enumerate}
+  \item \textbf{Presentation Layer (UI)} — Flutter widgets, screens and state management (Providers).
+  \item \textbf{Domain Layer} — Business logic, use-cases (e.g., personalizeRecipes, toggleFavorite).
+  \item \textbf{Data Layer} — Repositories that abstract data sources (Remote API, Local DB, Cache).
+  \item \textbf{Infrastructure Layer} — API clients, SQLite DB, image cache manager, file storage.
+\end{enumerate}
+
+\section{Component Diagram (textual)}
+\begin{itemize}
+  \item \textbf{UI / Screens:} Splash, Login, Register, Home, RecipesGrid, RecipeDetail, Favorites, Profile, RecipeUpload.
+  \item \textbf{Providers:} UserProvider, RecipeProvider.
+  \item \textbf{Use-Cases:} LoadRecipes, PersonalizeRecipes, UploadRecipe, ToggleFavorite, SyncQueue.
+  \item \textbf{Repositories:} RecipeRepository, UserRepository, ImageRepository.
+  \item \textbf{Remote Services:} ApiService (HTTP client), Media upload endpoint.
+  \item \textbf{Local Services:} DatabaseService (SQLite), CacheManager.
+  \item \textbf{Utilities:} Time parser, JSON serializer, ImagePathResolver.
+\end{itemize}
+
+\chapter{Data Model and Database Design}
+\section{Domain Models}
+Important domain entities:
+\begin{itemize}
+  \item \textbf{User:} id, username, email, profileImage, joinedDate
+  \item \textbf{Recipe:} id, name, category, cookingTime, calories, imagePath, ingredients[], steps[], moods[], difficulty, userId, isFavorite
+  \item \textbf{SyncItem:} id, entityType, entityId, operation, payload, status, timestamp
+\end{itemize}
+
+\section{Relational Schema (SQLite)}
+\begin{longtable}{p{4cm} p{10cm}}
+\hline
+\textbf{Table: users} & \\
+\hline
+id & INTEGER PRIMARY KEY \\
+username & TEXT \\
+email & TEXT UNIQUE \\
+profile_image & TEXT \\
+created_at & TEXT (ISO datetime) \\
+\hline
+\end{longtable}
+
+\begin{longtable}{p{4cm} p{10cm}}
+\hline
+\textbf{Table: recipes} & \\
+\hline
+id & INTEGER PRIMARY KEY \\
+name & TEXT \\
+category & TEXT \\
+time & TEXT \\
+calories & TEXT \\
+image & TEXT \\
+ingredients & TEXT (JSON encoded array) \\
+mood & TEXT (JSON encoded array) \\
+difficulty & TEXT \\
+steps & TEXT (JSON encoded array) \\
+userId & INTEGER \\
+isFavorite & INTEGER (0 or 1) \\
+created_at & TEXT \\
+updated_at & TEXT \\
+\hline
+\end{longtable}
+
+\begin{longtable}{p{4cm} p{10cm}}
+\hline
+\textbf{Table: sync\_queue} & Used to store local write operations when offline.\\
+\hline
+id & INTEGER PRIMARY KEY \\
+entityType & TEXT (e.g., 'recipe') \\
+entityId & INTEGER or NULL \\
+operation & TEXT (CREATE, UPDATE, DELETE) \\
+payload & TEXT (JSON) \\
+status & TEXT (PENDING, IN_PROGRESS, DONE, FAILED) \\
+attempts & INTEGER \\
+created_at & TEXT \\
+\hline
+\end{longtable}
+
+\section{Indexes and Performance}
+\begin{itemize}
+  \item Index on \texttt{recipes(name)}, \texttt{recipes(category)}, \texttt{recipes(isFavorite)}, and \texttt{recipes(userId)}.
+  \item Full text search (FTS) could be added later for ingredients and steps using SQLite FTS module.
+\end{itemize}
+
+\chapter{API Design}
+\section{Principles}
+\begin{itemize}
+  \item RESTful JSON APIs.
+  \item Use meaningful HTTP status codes.
+  \item For media uploads use multipart/form-data.
+  \item Pagination for recipe lists.
+\end{itemize}
+
+\section{Endpoints (summary)}
+\begin{longtable}{p{4cm} p{10cm}}
+\hline
+\textbf{POST /login} & Body: \{email, password\}. Response: \{token, user\}. \\ \hline
+\textbf{POST /register} & Body: \{username, email, password\}. Response: success boolean or user. \\ \hline
+\textbf{GET /recipes} & Query: ?page=&limit=&category=&mood=&timeMax=&query=. Response: list of recipes (paged). \\ \hline
+\textbf{GET /recipes/{id}} & Response: recipe object. \\ \hline
+\textbf{POST /recipes} & multipart: fields + image. Requires auth. Response: created recipe. \\ \hline
+\textbf{PUT /recipes/{id}} & Update recipe. Multipart optional. \\ \hline
+\textbf{POST /user/profile-picture} & multipart: image. Response: image path. \\ \hline
+\textbf{GET /health} & Health check. \\ \hline
+\end{longtable}
+
+\section{JSON Shapes (examples)}
+\subsection*{Recipe}
+\begin{verbatim}
+{
+  "id": 1,
+  "name": "Tomato Pasta",
+  "category": "Main Course",
+  "time": "30 mins",
+  "calories": "420",
+  "image_path": "recipes/tomato_pasta.jpg",
+  "ingredients": ["pasta","tomato","olive oil"],
+  "steps": ["Boil pasta", "Make sauce", "Mix"],
+  "mood": ["Comfort"],
+  "userId": 2,
+  "isFavorite": false
+}
+\end{verbatim}
+
+\chapter{Component Behaviour and Sequences}
+\section{Use-case: Get Personalized Recipe Suggestions}
+Sequence overview:
+\begin{itemize}
+  \item User chooses ingredients + mood + time in HomeScreen.
+  \item UI calls RecipeProvider.personalizeRecipes().
+  \item RecipeProvider invokes RecipeRepository.getFilteredRecipes(ingredients, mood, time).
+  \item Repository queries local DB for matches; if cache stale or insufficient, calls ApiService.getRecipes() and updates local DB.
+  \item Repository returns filtered list to Provider; UI renders results.
+\end{itemize}
+
+\subsection*{PlantUML (sequence) — source}
+\begin{verbatim}
+@startuml
+actor User
+User -> HomeScreen: select(ingredients,mood,time)
+HomeScreen -> RecipeProvider: personalizeRecipes(...)
+RecipeProvider -> RecipeRepository: getFilteredRecipes(...)
+alt cache available
+  RecipeRepository -> DatabaseService: queryFiltered(...)
+  DatabaseService --> RecipeRepository: results
+else
+  RecipeRepository -> ApiService: getRecipes()
+  ApiService --> RecipeRepository: recipes
+  RecipeRepository -> DatabaseService: upsertRecipes(recipes)
+  DatabaseService --> RecipeRepository: ack
+  RecipeRepository -> DatabaseService: queryFiltered(...)
+  DatabaseService --> RecipeRepository: results
+end
+RecipeRepository --> RecipeProvider: List<Recipe>
+RecipeProvider --> HomeScreen: update UI
+HomeScreen -> User: displayResults
+@enduml
+\end{verbatim}
+
+(You can paste the PlantUML code into a PlantUML renderer to get the diagram.)
+
+\section{Use-case: Upload Recipe (with offline queue)}
+Sequence:
+\begin{itemize}
+  \item User fills upload form and taps Submit.
+  \item If online: ApiService.uploadRecipe() called (multipart). On success update local DB.
+  \item If offline: create SyncItem in sync\_queue with operation CREATE and payload; mark recipe locally with temporary id and isFavorite default false.
+  \item Background Sync job processes sync\_queue when connectivity restored.
+\end{itemize}
+
+\chapter{Offline & Sync Design}
+\section{Goals}
+\begin{itemize}
+  \item Allow read access to previously fetched data while offline.
+  \item Allow user operations (like favorite, upload draft) to be persisted locally and synchronized later.
+  \item Avoid data loss and handle conflicts reasonably.
+\end{itemize}
+
+\section{Mechanism}
+\begin{itemize}
+  \item \textbf{Read cache:} All API-fetched recipes are upserted into local SQLite.
+  \item \textbf{Write queue:} Writes (uploads, edits) are persisted to \texttt{sync\_queue} with PENDING status.
+  \item \textbf{Sync worker:} Background job (periodic or on connectivity change) reads PENDING items, attempts to send them to server, updates status.
+  \item \textbf{Conflict handling:} Server-assigned IDs replace temporary local IDs during success; in case of conflicts (resource edited on server), latest-write-wins or user confirmation strategy (for critical cases).
+\end{itemize}
+
+\chapter{Caching Strategy}
+\section{Image caching}
+\begin{itemize}
+  \item Use \texttt{cached\_network\_image} with \texttt{DefaultCacheManager}.
+  \item Consider cache size limit (e.g., 100MB) and eviction policy LRU.
+\end{itemize}
+
+\section{API response caching}
+\begin{itemize}
+  \item Store recipe lists and details in SQLite.
+  \item Include ETag or lastUpdated timestamp support if API provides it.
+\end{itemize}
+
+\chapter{Security Design}
+\section{Authentication \& Authorization}
+\begin{itemize}
+  \item Use JWT tokens for authenticated requests (store token securely using secure storage plugin).
+  \item Token refresh strategy: short-lived access token + refresh token. (If backend supports.)
+  \item Enforce server-side validation and authorization for recipe edit/delete endpoints.
+\end{itemize}
+
+\section{Transport Security}
+\begin{itemize}
+  \item Use HTTPS in production. (Current base URL is HTTP — migrate to HTTPS before production.)
+  \item Validate TLS certificates and avoid bypassing certificate verification.
+\end{itemize}
+
+\section{Data Protection}
+\begin{itemize}
+  \item Do not store plaintext passwords locally.
+  \item Securely store tokens and private user data using platform secure storage APIs.
+  \item Minimize personally identifiable information (PII) stored on device.
+\end{itemize}
+
+\chapter{Scalability and Deployment}
+\section{Initial deployment}
+\begin{itemize}
+  \item Single-node backend (for course project).
+  \item PostgreSQL or SQLite for server-side persistence (depending on backend).
+  \item Static assets (images) served from a file server or simple object storage.
+\end{itemize}
+
+\section{Scalable architecture (future)}
+\begin{itemize}
+  \item API load balancer (NGINX) + multiple backend instances (containerized).
+  \item Cloud object storage (S3) for images.
+  \item Managed DB (RDS) for reliability and scaling.
+  \item CDN for image delivery.
+  \item Background worker queue (Redis + Sidekiq / Bull) for heavy processing such as image resizing or recommendation batch jobs.
+\end{itemize}
+
+\chapter{Operational Concerns}
+\section{Logging}
+\begin{itemize}
+  \item Client: local logging for crash reports and critical errors (send to remote logging when online).
+  \item Server: structured logs (JSON) including request ids for tracing.
+\end{itemize}
+
+\section{Monitoring}
+\begin{itemize}
+  \item Server health checks ( /health ) and metrics (response times, error rates).
+  \item Crash reporting for mobile (e.g., Sentry).
+\end{itemize}
+
+\chapter{Testing and Quality Assurance}
+\section{Automated Tests}
+\begin{itemize}
+  \item \textbf{Unit tests:} Domain logic (time conversions, filtering algorithms, JSON parsing).
+  \item \textbf{Widget tests:} UI rendering of critical screens using Flutter test.
+  \item \textbf{Integration tests:} Flows like login \(\rightarrow\) fetch recipes \(\rightarrow\) favorite.
+  \item \textbf{Sync tests:} Offline write queue and retry logic.
+\end{itemize}
+
+\section{Manual Testing}
+\begin{itemize}
+  \item Cross-device manual verification for UI responsiveness.
+  \item Network throttling tests for offline/slow-net behavior.
+\end{itemize}
+
+\chapter{Non-functional Considerations}
+\begin{itemize}
+  \item \textbf{Performance:} Use lazy loading for lists, image thumbnails, and pagination.
+  \item \textbf{Maintainability:} Keep clean architecture boundaries; write documentation and code comments.
+  \item \textbf{Accessibility:} Ensure contrast, font size settings, and screen reader labels.
+  \item \textbf{Localization:} Use Intl package for strings.
+\end{itemize}
+
+\chapter{Future Enhancements}
+\begin{itemize}
+  \item Add recommendation engine (collaborative filtering or content-based ranking).
+  \item Add social features (share recipes, follow users).
+  \item Add admin dashboard for content moderation.
+  \item Add FTS-based search for ingredients and steps.
+\end{itemize}
+
+\chapter{Appendices}
+\section{Appendix A: PlantUML sources}
+\subsection*{Personalize suggestion sequence (PlantUML)}
+\begin{verbatim}
+@startuml
+actor User
+User -> HomeScreen: select(ingredients,mood,time)
+HomeScreen -> RecipeProvider: personalizeRecipes(...)
+RecipeProvider -> RecipeRepository: getFilteredRecipes(...)
+alt cache available
+  RecipeRepository -> DatabaseService: queryFiltered(...)
+  DatabaseService --> RecipeRepository: results
+else
+  RecipeRepository -> ApiService: getRecipes()
+  ApiService --> RecipeRepository: recipes
+  RecipeRepository -> DatabaseService: upsertRecipes(recipes)
+  DatabaseService --> RecipeRepository: ack
+  RecipeRepository -> DatabaseService: queryFiltered(...)
+  DatabaseService --> RecipeRepository: results
+end
+RecipeRepository --> RecipeProvider: List<Recipe>
+RecipeProvider --> HomeScreen: update UI
+HomeScreen -> User: displayResults
+@enduml
+\end{verbatim}
+
+\subsection*{Upload recipe with offline queue (PlantUML)}
+\begin{verbatim}
+@startuml
+actor User
+User -> UploadScreen: fillForm() & submit()
+UploadScreen -> ConnectivityService: checkOnline()
+alt online
+  UploadScreen -> ApiService: uploadRecipe(multipart)
+  ApiService --> UploadScreen: success (createdRecipe)
+  UploadScreen -> DatabaseService: upsertRecipe(createdRecipe)
+else offline
+  UploadScreen -> DatabaseService: insertLocalRecipe(tempId, payload)
+  DatabaseService --> UploadScreen: success
+  UploadScreen -> SyncQueue: enqueue(CREATE, payload)
+end
+@enduml
+\end{verbatim}
+
+\section{Appendix B: Glossary}
+\begin{itemize}
+  \item \textbf{FTS:} Full Text Search
+  \item \textbf{JWT:} JSON Web Token
+  \item \textbf{LRU:} Least Recently Used (cache eviction)
+\end{itemize}
+
+\end{document}
