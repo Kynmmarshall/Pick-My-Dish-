@@ -46,28 +46,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
   // Add this check first
   if (!mounted) return;
   
+  // Clear all user data from provider
   final userProvider = Provider.of<UserProvider>(context, listen: false);
+  final recipeProvider = Provider.of<RecipeProvider>(context, listen: false);
   
-  bool success = await ApiService.updateUsername(
-    usernameController.text,
-    userProvider.userId  
-  );
-
+  userProvider.logout();
+  recipeProvider.logout();
   
-  // Check mounted again after async operation
-  if (!mounted) return;
-  
-  if (success) {
-    userProvider.updateUsername(usernameController.text, userProvider.userId);
-    setState(() {
-      _isEditing = false;
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Username updated!'), backgroundColor: Colors.green),
-    );
-  } else {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Update failed!'), backgroundColor: Colors.red),
+  // Navigate to login (clear navigation stack)
+  if (mounted) {
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (context) => LoginScreen()),
+      (route) => false,
     );
   }
 }

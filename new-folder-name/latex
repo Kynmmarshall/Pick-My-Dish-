@@ -1,0 +1,304 @@
+\documentclass[12pt,a4paper]{report}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{geometry}
+\usepackage{setspace}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{array}
+
+\geometry{margin=1in}
+\setstretch{1.2}
+
+\titleformat{\chapter}{\huge\bfseries}{\thechapter}{1em}{}
+\titleformat{\section}{\Large\bfseries}{\thesection}{1em}{}
+\titleformat{\subsection}{\large\bfseries}{\thesubsection}{1em}{}
+
+\begin{document}
+
+\begin{titlepage}
+    \centering
+    {\Huge \textbf{Project Proposal for Software Design and Modelling}}\\[1.5cm]
+    {\Large \textbf{PickMyDish: What Should I Eat Today?}}\\[2cm]
+    {\large Submitted by:}\\[0.2cm]
+    {\large Team Members}\\[3cm]
+    \vfill
+    {\large \today}
+\end{titlepage}
+
+\tableofcontents
+\newpage
+
+\chapter{Introduction}
+
+\section{Project Overview}
+
+We propose a mobile application titled \textbf{PickMyDish – What Should I Eat Today?}.  
+The idea originates from a common daily struggle: deciding what to cook or eat, especially when time, budget, or ingredients are limited.
+
+The application recommends meals based on:
+\begin{itemize}
+    \item Ingredients the user already has,
+    \item The user’s mood (e.g., healthy, lazy, hungry, energetic),
+    \item The time available to prepare a meal.
+\end{itemize}
+
+The app provides:
+\begin{itemize}
+    \item Suggested recipes,
+    \item Step-by-step instructions,
+    \item Images of meals,
+    \item Ability to save favorites.
+\end{itemize}
+
+The system is developed using Flutter and structured under a well-defined clean architecture.
+
+\chapter{Application Architecture Overview}
+
+\section{Main Application Setup}
+
+The app is initialized in \texttt{Main.dart} using \texttt{MultiProvider}. It loads two core providers:
+
+\begin{itemize}
+    \item \textbf{UserProvider}: Manages authentication and profile data.
+    \item \textbf{RecipeProvider}: Manages recipes and favorites.
+\end{itemize}
+
+The entry flow:
+\begin{enumerate}
+    \item \textbf{SplashScreen} appears for 3 seconds.
+    \item Navigates to \textbf{LoginScreen}.
+\end{enumerate}
+
+\section{State Management}
+
+The application uses the \textbf{Provider} pattern for efficient state handling.
+
+\subsection{UserProvider Manages:}
+\begin{itemize}
+    \item Current user
+    \item Profile data
+    \item Preferences
+\end{itemize}
+
+\subsection{RecipeProvider Manages:}
+\begin{itemize}
+    \item Recipe catalog
+    \item Favorites
+    \item Filtering logic
+\end{itemize}
+
+\section{Navigation Flow}
+
+Users navigate through:
+
+\begin{itemize}
+    \item SplashScreen
+    \item LoginScreen / RegisterScreen
+    \item HomeScreen
+    \item RecipesScreen
+    \item FavoritesScreen
+    \item ProfileScreen
+    \item RecipeUploadScreen
+\end{itemize}
+
+\chapter{Core Styling and Constants}
+
+\section{Text Styles}
+
+\begin{table}[h!]
+\centering
+\begin{tabular}{|l|l|}
+\hline
+\textbf{Style} & \textbf{Description} \\ \hline
+title & White, TimesNewRoman, 37px, weight 600 \\ \hline
+mediumtitle & White, TimesNewRoman, 23px, weight 600 \\ \hline
+footer & White, TimesNewRoman, 22px, weight 600 \\ \hline
+footerClickable & Orange, TimesNewRoman, 22px, weight 600 \\ \hline
+text & White, TimesNewRoman, 18px, weight 600 \\ \hline
+caloriesText & White, TimesNewRoman, 14px \\ \hline
+categoryText & Orange, TimesNewRoman, 16px \\ \hline
+placeHolder & White (193 opacity), TimesNewRoman, 20px \\ \hline
+\end{tabular}
+\end{table}
+
+\section{Global Variables}
+
+\begin{itemize}
+    \item \texttt{isPasswordVisible}: Boolean flag
+    \item \texttt{iconSize = 40}: Consistent icon size
+\end{itemize}
+
+\section{Design Philosophy}
+
+\begin{itemize}
+    \item Dark theme UI
+    \item Orange accents
+    \item Times New Roman typography
+\end{itemize}
+
+\chapter{Image Handling and Caching}
+
+\section{Overview}
+
+A custom widget \texttt{CachedProfileImage} handles image loading and caching.
+
+\subsection{1. Image Source Detection}
+Local assets vs remote images are automatically detected.
+
+\subsection{2. Caching}
+Remote images cached via \textbf{CachedNetworkImage}.
+
+\subsection{3. Display Options}
+Supports:
+\begin{itemize}
+    \item Circular avatars
+    \item Rectangular images
+\end{itemize}
+
+\subsection{4. Loading and Error Handling}
+\begin{itemize}
+    \item Circular progress indicator during load
+    \item Error icon if image fails
+\end{itemize}
+
+\chapter{Backend API Service Integration}
+
+\section{Authentication}
+
+The \texttt{ApiService} class handles communication with backend:
+
+\begin{itemize}
+    \item \texttt{testConnection()}
+    \item \texttt{login(email, password)}
+    \item \texttt{register(username, email, password)}
+\end{itemize}
+
+\section{User Profile Management}
+
+\begin{itemize}
+    \item Update username
+    \item Upload profile picture
+    \item Retrieve profile picture
+\end{itemize}
+
+\section{Recipe Operations}
+
+\begin{itemize}
+    \item \texttt{getRecipes()}
+    \item \texttt{uploadRecipe()}
+\end{itemize}
+
+\chapter{Local Database (SQLite)}
+
+\section{Database Structure}
+
+The app uses \textbf{sqflite} with the following fields:
+
+\begin{itemize}
+    \item id, name, category, time, calories
+    \item image
+    \item ingredients (JSON)
+    \item mood (JSON)
+    \item difficulty
+    \item steps (JSON)
+    \item isFavorite
+\end{itemize}
+
+\section{Core Operations}
+
+\begin{itemize}
+    \item \texttt{getRecipes()}
+    \item \texttt{getFilteredRecipes()}
+    \item \texttt{toggleFavorite()}
+\end{itemize}
+
+\chapter{Data Models}
+
+\section{Recipe Model}
+
+Fields include:
+\begin{itemize}
+    \item id, name, category, time, calories
+    \item imagePath
+    \item ingredients, steps, moods
+    \item isFavorite
+\end{itemize}
+
+\section{User Model}
+
+Fields include:
+\begin{itemize}
+    \item id
+    \item username
+    \item email
+    \item profileImage
+    \item joinedDate
+\end{itemize}
+
+\chapter{State Management With Providers}
+
+\section{RecipeProvider}
+
+Manages:
+\begin{itemize}
+    \item Recipes list
+    \item Favorites
+    \item Loading and error states
+\end{itemize}
+
+\section{UserProvider}
+
+Handles:
+\begin{itemize}
+    \item Authenticated user
+    \item Profile updates
+    \item Logout
+\end{itemize}
+
+\chapter{User Interface Screens}
+
+\section{Screens Overview}
+
+\begin{enumerate}
+    \item SplashScreen
+    \item LoginScreen / RegisterScreen
+    \item HomeScreen
+    \item RecipesScreen
+    \item RecipeDetailScreen
+    \item FavoritesScreen
+    \item ProfileScreen
+    \item RecipeUploadScreen
+\end{enumerate}
+
+\chapter{Testing and Project Configuration}
+
+\section{Widget Testing}
+
+Includes tests for:
+\begin{itemize}
+    \item Screen rendering
+    \item Form validation
+    \item Buttons and icons
+    \item Search fields
+\end{itemize}
+
+\section{Dependencies (Pubspec.yaml)}
+
+Key dependencies:
+\begin{itemize}
+    \item sqflite
+    \item provider
+    \item http
+    \item image\_picker
+    \item cached\_network\_image
+\end{itemize}
+
+Fonts: TimesNewRoman  
+Images organized under assets folder.
+
+\chapter{Conclusion}
+
+PickMyDish is a feature-rich and user-friendly mobile platform that simplifies food decision-making by combining mood analysis, ingredient filtering, and time-based recommendations. The project uses a clean architecture, robust backend integration, local caching, SQLite storage, and a visually appealing UI built with Flutter.
+
+\end{document}

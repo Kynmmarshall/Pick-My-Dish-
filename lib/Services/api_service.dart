@@ -6,22 +6,46 @@ import 'package:http/http.dart' as http;
 
 class ApiService {
   // Backend server base URL
-    
-    // For physical device testing:
-   //static const String baseUrl = "http://192.168.1.110:3000";
-  
-  // For production (VPS):
   static const String baseUrl = "http://38.242.246.126:3000";
-  
+  static String? _authToken;
+
+  // Set auth token from provider
+  static void setAuthToken(String token) {
+    _authToken = token;
+    debugPrint('🔑 API Token set: ${token.substring(0, 20)}...');
+  }
+
+  // Clear auth token
+  static void clearAuthToken() {
+    _authToken = null;
+    debugPrint('🔑 API Token cleared');
+  }
+
+  // Get headers with authorization if token exists
+  static Map<String, String> _getHeaders() {
+    final headers = {'Content-Type': 'application/json'};
+    if (_authToken != null) {
+      headers['Authorization'] = 'Bearer $_authToken';
+    }
+    return headers;
+  }
+
+  // Initialize API service with context (call this after login)
+  static void initializeWithContext(BuildContext context) {
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    if (userProvider.authToken != null) {
+      setAuthToken(userProvider.authToken!);
+    }
+  }
+
   // Test if backend is reachable and database is connected
   static Future<void> testConnection() async {
     try {
-      // Send GET request to test endpoint
       final response = await http.get(Uri.parse('$baseUrl/api/pick_my_dish'));
-      debugPrint('Backend status: ${response.statusCode}');  // Should be 200 if successful
-      debugPrint('Response: ${response.body}');  // Response data from backend
+      debugPrint('Backend status: ${response.statusCode}');
+      debugPrint('Response: ${response.body}');
     } catch (e) {
-      debugPrint('Connection error: $e');  // Handle network/database errors
+      debugPrint('Connection error: $e');
     }
   }
 
@@ -29,6 +53,8 @@ class ApiService {
   //login user
   static Future<Map<String, dynamic>?>  login(String email, String password) async {
     try {
+      debugPrint('🔐 Attempting login for: $email');
+      
       final response = await http.post(
         Uri.parse('$baseUrl/api/auth/login'),
         body: json.encode({'email': email, 'password': password}),
@@ -40,9 +66,27 @@ class ApiService {
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         debugPrint('✅ Login successful: ${data['message']}');
-        debugPrint('👤 User: ${data['user']}');
-        return data;
+        debugPrint('👤 User data received');
+        
+        // Extract token from response
+        final token = data['token'] ?? data['access_token'] ?? data['auth_token'];
+        final userId = data['user']?['id'] ?? data['userId'] ?? 0;
+        
+        if (token != null) {
+          // Store the token
+          setAuthToken(token);
+          
+          return {
+            'user': data['user'] ?? {},
+            'token': token,
+            'userId': userId,
+          };
+        } else {
+          debugPrint('⚠️ No token received in login response');
+          return {'user': data['user'] ?? {}, 'userId': userId};
+        }
       } else {
+        final errorData = json.decode(response.body);
         debugPrint('❌ Login failed: ${response.statusCode} - ${response.body}');
         return {'error': errorData['error'] ?? 'Login failed'};
       }
@@ -52,9 +96,11 @@ class ApiService {
     }
   }
 
-// Register a new user with name, email, and password
-static Future<bool> register(String userName, String email, String password) async {
+  // Register a new user with name, email, and password
+  static Future<bool> register(String userName, String email, String password) async {
     try {
+      debugPrint('📝 Attempting registration for: $email');
+      
       final response = await http.post(
         Uri.parse('$baseUrl/api/auth/register'),
         body: json.encode({
@@ -64,6 +110,8 @@ static Future<bool> register(String userName, String email, String password) asy
         }),
         headers: {'Content-Type': 'application/json'},
       );
+      
+      debugPrint('📡 Registration Response: ${response.statusCode}');
       
       if (response.statusCode == 201) {
         final data = json.decode(response.body);
@@ -87,40 +135,65 @@ static Future<void> testAuth() async {
   debugPrint(registered ? '✅ Registration successful' : '❌ Registration failed');
   
 
-}
-
-// Add this test
-static Future<void> testBaseUrl() async {
-  try {
-    final response = await http.get(Uri.parse('$baseUrl/'));
-    debugPrint('Base URL status: ${response.statusCode}');
-    debugPrint('Base URL response: ${response.body}');
-  } catch (e) {
-    debugPrint('Base URL error: $e');
+  static Future<void> testBaseUrl() async {
+    try {
+      final response = await http.get(Uri.parse('$baseUrl/'));
+      debugPrint('Base URL status: ${response.statusCode}');
+      debugPrint('Base URL response: ${response.body}');
+    } catch (e) {
+      debugPrint('Base URL error: $e');
+    }
   }
-}
 
-//update user name
-static Future<bool> updateUsername(String newUsername, int userId) async {
-  try {
-     debugPrint('🔄 Updating username: $newUsername for user: $userId');
-    final response = await http.put(
-      Uri.parse('$baseUrl/api/users/username'),
-      body: json.encode({
-        'username': newUsername,
-        'userId': userId  // ← Send user ID
-      }),
-      headers: {'Content-Type': 'application/json'},
-    );
-
-    debugPrint('📡 Status: ${response.statusCode}');
-    debugPrint('📡 Body: ${response.body}');
-    return response.statusCode == 200;
-  } catch (e) {
-    debugPrint('❌ Error: $e');
-    return false;
+  // Update user name - MODIFIED to use token
+  static Future<bool> updateUsername(String newUsername, int userId) async {
+    try {
+      debugPrint('🔄 Updating username: $newUsername for user: $userId');
+      
+      final response = await http.put(
+        Uri.parse('$baseUrl/api/users/username'),
+        body: json.encode({
+          'username': newUsername,
+          'userId': userId
+        }),
+        headers: _getHeaders(), // Use token headers
+      );
+      
+      debugPrint('📡 Status: ${response.statusCode}');
+      debugPrint('📡 Body: ${response.body}');
+      return response.statusCode == 200;
+    } catch (e) {
+      debugPrint('❌ Error: $e');
+      return false;
+    }
   }
-}
+
+  // Update profile picture - MODIFIED to use token
+  static Future<bool> uploadProfilePicture(File imageFile, int userId) async {
+    try {
+      var request = http.MultipartRequest(
+        'PUT',
+        Uri.parse('$baseUrl/api/users/profile-picture')
+      );
+      
+      request.files.add(
+        await http.MultipartFile.fromPath('image', imageFile.path)
+      );
+      
+      request.fields['userId'] = userId.toString();
+      
+      // Add authorization header if token exists
+      if (_authToken != null) {
+        request.headers['Authorization'] = 'Bearer $_authToken';
+      }
+      
+      var response = await request.send();
+      return response.statusCode == 200;
+    } catch (e) {
+      debugPrint('❌ Upload profile picture error: $e');
+      return false;
+    }
+  }
 
 //update profile picture
 static Future<bool> uploadProfilePicture(File imageFile, int userId) async {

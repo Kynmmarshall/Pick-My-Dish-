@@ -18,9 +18,11 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isPasswordVisible = false;
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  bool _isLoading = false;
 
 
   void _login() async {
+    // Validate inputs
     if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -31,18 +33,12 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
-
-    // Get email from your TextEditingController
-    final email = _emailController.text.trim();
-
     // Show loading
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => const Center(
-        child: CircularProgressIndicator(color: Colors.orange),
-      ),
-    );
+    setState(() => _isLoading = true);
+    
+    // Get email and password
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
 
     try {
       // Call your backend API
@@ -88,29 +84,57 @@ class _LoginScreenState extends State<LoginScreen> {
           context, 
           MaterialPageRoute(builder: (context) => HomeScreen())
         );
-      }
+        
+        // Initialize API service with token
+        ApiService.setAuthToken(response['token'] ?? '');
+        
+        debugPrint('✅ Login successful, navigating to HomeScreen');
+        
+        if (context.mounted) {
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (context) => const HomeScreen()),
+            (route) => false, // Remove all previous routes
+          );
+        }
       } else {
         // Login failed
         // Hide loading
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Invalid email or password', style: text),
+            content: Text(errorMessage, style: text),
             backgroundColor: Colors.red,
           ),
         );
       }
     } catch (e) {
-      // Hide loading
-      Navigator.pop(context);
-      
+      // Connection error
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Connection error: $e', style: text),
           backgroundColor: Colors.red,
         ),
       );
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
+  }
+
+  void _loginAsGuest() {
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    
+    // Clear any existing user data
+    userProvider.clearAllUserData();
+    
+    // Navigate to home as guest
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (context) => const HomeScreen()),
+      (route) => false,
+    );
   }
 
   @override
@@ -127,6 +151,7 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
         child: Stack(
           children: [
+            // Gradient overlay
             Container(
               width: double.infinity,
               height: double.infinity,
@@ -138,7 +163,8 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
             ),
-
+            
+            // Login Form
             Padding(
               padding: const EdgeInsets.all(30),
               child: Center(
@@ -146,32 +172,28 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: Column(
                     children: [
                       const SizedBox(height: 20),
-                      //logo
+                      
+                      // Logo
                       Image.asset(
                         'assets/login/logo.png',
                         width: 100,
                         height: 100,
                       ),
-
+                      
                       const SizedBox(height: 10),
-
+                      
+                      // App Title
                       Text("PICK MY DISH", style: title),
-
                       Text("Cook in easy way", style: text),
-
+                      
                       const SizedBox(height: 5),
-
                       Text("Login", style: title),
-
-                      const SizedBox(height: 15),
-
+                      const SizedBox(height: 30),
+                      
+                      // Email Input
                       Row(
                         children: [
-                          const Icon(
-                            Icons.email,
-                            color: Colors.white,
-                            size: iconSize,
-                          ),
+                          const Icon(Icons.email, color: Colors.white, size: iconSize),
                           const SizedBox(width: 10),
                           Expanded(
                             child: TextField(
@@ -181,20 +203,18 @@ class _LoginScreenState extends State<LoginScreen> {
                                 hintText: "Email Address",
                                 hintStyle: placeHolder,
                               ),
+                              keyboardType: TextInputType.emailAddress,
                             ),
                           ),
                         ],
                       ),
-
+                      
                       const SizedBox(height: 15),
-
+                      
+                      // Password Input
                       Row(
                         children: [
-                          const Icon(
-                            Icons.key,
-                            color: Colors.white,
-                            size: iconSize,
-                          ),
+                          const Icon(Icons.key, color: Colors.white, size: iconSize),
                           const SizedBox(width: 10),
                           Expanded(
                             child: TextField(
@@ -206,9 +226,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 hintStyle: placeHolder,
                                 suffixIcon: IconButton(
                                   icon: Icon(
-                                    _isPasswordVisible
-                                        ? Icons.visibility
-                                        : Icons.visibility_off,
+                                    _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
                                     color: Colors.white,
                                   ),
                                   onPressed: () {
@@ -222,9 +240,10 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ],
                       ),
-
+                      
                       const SizedBox(height: 10),
-
+                      
+                      // Guest Login
                       Row(
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
@@ -242,12 +261,13 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ],
                       ),
-
+                      
                       const SizedBox(height: 20),
-                      // Google Sign In
+                      
+                      // Google Sign In (optional)
                       GestureDetector(
                         onTap: () {
-                          // Google sign in logic
+                          // Google sign in logic (to be implemented)
                         },
                         child: Container(
                           width: 40,
@@ -263,7 +283,6 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                             ],
                           ),
-                          
                           child: const Icon(
                             Icons.g_mobiledata,
                             color: Colors.red,
@@ -271,27 +290,29 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                       ),
-
+                      
                       const SizedBox(height: 20),
-
+                      
                       // Login Button
-                      ElevatedButton(
-                        onPressed: _login,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.orange,
-                          minimumSize: const Size(double.infinity, 50),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                        ),
-                        child: Text(
-                          "Login",
-                          style: title.copyWith(fontSize: 20),
-                        ),
-                      ),
-
+                      _isLoading
+                          ? const CircularProgressIndicator(color: Colors.orange)
+                          : ElevatedButton(
+                              onPressed: _login,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.orange,
+                                minimumSize: const Size(double.infinity, 50),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                              ),
+                              child: Text(
+                                "Login",
+                                style: title.copyWith(fontSize: 20),
+                              ),
+                            ),
+                      
                       const SizedBox(height: 20),
-
+                      
                       // Register Link
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -321,4 +342,10 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
 }

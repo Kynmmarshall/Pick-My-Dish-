@@ -2,12 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:pick_my_dish/Models/user_model.dart';
 
-/// Provider that holds and manages the current authenticated user.
-/// 
-/// Uses [ChangeNotifier] so widgets can listen to changes and rebuild
-/// when the user data is updated or cleared.
 class UserProvider with ChangeNotifier {
-  // Backing field for the current user. Null when no user is logged in.
   User? _user;
   int _userId = 0;
   DateTime _joined = DateTime.now();
@@ -25,39 +20,123 @@ class UserProvider with ChangeNotifier {
   List<int> _userFavorites = [];
   Map<String, dynamic> _userSettings = {};
 
-  /// Returns the email of the current user, or empty string if not available.
-  String get email => _user?.email ?? '';
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      
+      // Check if token exists
+      final savedToken = prefs.getString('auth_token');
+      final savedUserId = prefs.getInt('user_id');
+      final savedUsername = prefs.getString('username');
+      final savedEmail = prefs.getString('email');
+      final savedProfileImage = prefs.getString('profile_image');
+      
+      if (savedToken != null && savedUserId != null) {
+        // Set token and user data
+        _authToken = savedToken;
+        _userId = savedUserId;
+        
+        // Create a user object from saved data
+        if (savedUsername != null && savedEmail != null) {
+          _user = User(
+            id: savedUserId.toString(),
+            username: savedUsername,
+            email: savedEmail,
+            profileImage: savedProfileImage,
+          );
+        }
+        
+        if (savedProfileImage != null && savedProfileImage.isNotEmpty) {
+          _profilePicture = savedProfileImage;
+        }
+        
+        debugPrint('✅ Loaded saved authentication for user: $savedUsername');
+      } else {
+        debugPrint('ℹ️ No saved authentication found');
+      }
+    } catch (e) {
+      debugPrint('❌ Error loading saved auth: $e');
+    } finally {
+      _isCheckingAuth = false;
+      notifyListeners();
+    }
+  }
 
-  /// Returns the profile image URL of the current user, or null if not available.
-  String? get profileImage => _user?.profileImage;
+  // Save authentication data to persistent storage
+  Future<void> _saveAuthData(Map<String, dynamic> authData) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      
+      if (authData['token'] != null) {
+        await prefs.setString('auth_token', authData['token']);
+        _authToken = authData['token'];
+      }
+      
+      if (authData['userId'] != null) {
+        await prefs.setInt('user_id', authData['userId']);
+        _userId = authData['userId'];
+      }
+      
+      if (_user != null) {
+        await prefs.setString('username', _user!.username);
+        await prefs.setString('email', _user!.email);
+        
+        if (_user!.profileImage != null) {
+          await prefs.setString('profile_image', _user!.profileImage!);
+        }
+      }
+      
+      debugPrint('💾 Authentication data saved');
+    } catch (e) {
+      debugPrint('❌ Error saving auth data: $e');
+    }
+  }
 
-  /// Indicates whether a user is currently logged in.
-  bool get isLoggedIn => _user != null;
+  // Clear saved authentication from persistent storage
+  Future<void> _clearAuthData() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('auth_token');
+      await prefs.remove('user_id');
+      await prefs.remove('username');
+      await prefs.remove('email');
+      await prefs.remove('profile_image');
+      debugPrint('🗑️ Authentication data cleared from storage');
+    } catch (e) {
+      debugPrint('❌ Error clearing auth data: $e');
+    }
+  }
 
   
   /// Set (or replace) the current user and notify listeners.
-  ///
-  /// Call this after a successful login or when user data is fetched.
-  void setUser(User user) {
+  void setUser(User user, {Map<String, dynamic>? authData}) {
     _user = user;
-    notifyListeners(); // Notify widgets that depend on user data.
+    
+    if (authData != null) {
+      // Save authentication data to persistent storage
+      _saveAuthData(authData);
+    }
+    
+    notifyListeners();
   }
 
-  /// Create and set user from JSON data (typically from API response).
-  ///
-  /// Convenience method that uses [User.fromJson] constructor.
-  void setUserFromJson(Map<String, dynamic> userData) {
+  /// Create and set user from JSON data with authentication data.
+  void setUserFromJson(Map<String, dynamic> userData, {Map<String, dynamic>? authData}) {
     _user = User.fromJson(userData);
+    
+    if (authData != null) {
+      // Save authentication data to persistent storage
+      _saveAuthData(authData);
+    }
+    
     notifyListeners();
   }
 
   /// Update only the username for the current user and notify listeners.
-  ///
-  /// If there is no current user, this method does nothing.
   void updateUsername(String newUsername, int userId) {
     if (_user != null) {
-      // Use the model's copyWith to preserve other fields.
       _user = _user!.copyWith(username: newUsername);
+      // Update in storage
+      _saveUsername(newUsername);
       notifyListeners();
     }
   }
@@ -71,10 +150,31 @@ class UserProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  /// Save profile picture to persistent storage
+  Future<void> _saveProfilePicture(String imagePath) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('profile_image', imagePath);
+    } catch (e) {
+      debugPrint('❌ Error saving profile picture: $e');
+    }
+  }
 
   /// Clear the current user (log out) and notify listeners.
   void clearUser() {
     _user = null;
+    _authToken = null;
+    _userId = 0;
+    _profilePicture = 'assets/login/noPicture.png';
+    _userRecipes = [];
+    _userFavorites = [];
+    _userSettings = {};
+    
+    // Clear from persistent storage
+    _clearAuthData();
+    // Clear image cache
+    _clearImageCache();
+    
     notifyListeners();
   }
 
@@ -82,6 +182,7 @@ class UserProvider with ChangeNotifier {
     _userId = userId;
     notifyListeners();
   }
+
   /// Debug method to print current user state
   void printUserState() {
     if (_user == null) {
