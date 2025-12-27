@@ -2,15 +2,21 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:pick_my_dish/Models/recipe_model.dart';
+import 'package:pick_my_dish/Providers/recipe_provider.dart';
 import 'package:pick_my_dish/Providers/user_provider.dart';
 import 'package:pick_my_dish/Screens/login_screen.dart';
 import 'package:pick_my_dish/Screens/recipe_detail_screen.dart';
+import 'package:pick_my_dish/Screens/recipe_upload_screen.dart';
+import 'package:pick_my_dish/Services/api_service.dart';
 import 'package:pick_my_dish/constants.dart';
 import 'package:pick_my_dish/services/database_service.dart';
 import 'package:pick_my_dish/Screens/favorite_screen.dart';
 import 'package:pick_my_dish/Screens/profile_screen.dart';
 import 'package:pick_my_dish/Screens/recipe_screen.dart';
 import 'package:dropdown_search/dropdown_search.dart';
+import 'package:pick_my_dish/widgets/cached_image.dart';
+import 'package:pick_my_dish/widgets/ingredient_Selector.dart';
 import 'package:provider/provider.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -23,7 +29,11 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   String? selectedEmotion;
   List<String> selectedIngredients = [];
+  List<int> selectedIngredientIds = [];
+  List<Recipe> _todayRecipes = [];
+  bool _loadingTodayRecipes = false;
   String? selectedTime;
+  bool _recipesLoaded = false;
 
   List<String> emotions = [
     'Happy',
@@ -34,87 +44,279 @@ class _HomeScreenState extends State<HomeScreen> {
     'Quick',
     'Light',
   ];
-  List<String> ingredients = [
-    'Eggs',
-    'Flour',
-    'Chicken',
-    'Vegetables',
-    'Rice',
-    'Pasta',
-    'Cheese',
-    'Milk',
-    'Bread',
-    'Avocado',
-    'Berries',
-    'Yogurt',
-    'Bacon',
-    'Lettuce',
-    'Tomato',
-  ];
-  List<String> timeOptions = ['15 mins', '30 mins', '1 hour', '2+ hours'];
+  List<String> timeOptions = ['<= 15mins', '<= 30mins', '<= 1hour', '<= 1hour 30mins', '2+ hours'];
+  List<Map<String, dynamic>> allIngredients = [];
 
   final DatabaseService _databaseService = DatabaseService();
-  List<Map<String, dynamic>> personalizedRecipes = [];
+  List<Recipe> personalizedRecipes = [];
   bool showPersonalizedResults = false;
+  bool _isLoading = false;
 
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
-  void _generateRecipes() async {
-    if (selectedIngredients.isEmpty &&
-        selectedEmotion == null &&
-        selectedTime == null) {
+  void _generatePersonalisedRecipes() async {
+  if (selectedIngredients.isEmpty &&
+      selectedEmotion == null &&
+      selectedTime == null) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Please select at least one filter', style: text),
+        backgroundColor: Colors.orange,
+      ),
+    );
+    return;
+  }
+
+   // Show loading
+  setState(() {
+    _loadingTodayRecipes = true;
+  });
+
+  try {
+    // Get all recipes from API
+    final recipeMaps = await ApiService.getRecipes();
+    final allRecipes = recipeMaps.map((map) => Recipe.fromJson(map)).toList();
+    
+    // Apply filters
+    final List<Recipe> filteredRecipes = allRecipes.where((recipe) {
+      bool matches = true;
+      
+      // Filter by emotions/moods
+      if (selectedEmotion != null) {
+        matches = matches && 
+            (recipe.moods.contains(selectedEmotion!) ||
+             recipe.moods.any((mood) => mood.toLowerCase() == selectedEmotion!.toLowerCase()));
+      }
+      
+      // Filter by ingredients
+      if (selectedIngredients.isNotEmpty) {
+        // Convert ingredient IDs to names for comparison
+        final selectedIngredientNames = selectedIngredientIds
+            .map((id) => _getIngredientName(id))
+            .where((name) => name != 'Unknown')
+            .toList();
+        
+        if (selectedIngredientNames.isNotEmpty) {
+          matches = matches && recipe.ingredients.any((recipeIngredient) {
+            return selectedIngredientNames.any((selectedIngredient) {
+              return recipeIngredient.toLowerCase().contains(selectedIngredient.toLowerCase());
+            });
+          });
+        }
+      }
+      
+      // Filter by cooking time (simplified)
+      if (selectedTime != null) {
+        final selectedMinutes = _parseTimeToMinutes(selectedTime!);
+        final recipeMinutes = _parseTimeToMinutes(recipe.cookingTime);
+        
+        // Show recipes with less or equal time
+        if (selectedMinutes > 0 && recipeMinutes > 0) {
+          matches = matches && recipeMinutes <= selectedMinutes;
+        }
+      }
+      
+      return matches;
+    }).toList();
+
+    setState(() {
+      personalizedRecipes = filteredRecipes;
+      showPersonalizedResults = true;
+      _loadingTodayRecipes = false;
+    });
+
+    if (filteredRecipes.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Please select at least one filter', style: text),
+          content: Text('No recipes found with your criteria', style: text),
           backgroundColor: Colors.orange,
         ),
       );
+    } else {
+      _showPersonalizedResults(filteredRecipes);
+    }
+  } catch (e) {
+    setState(() {
+      _loadingTodayRecipes = false;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Error generating recipes: $e', style: text),
+        backgroundColor: Colors.red,
+      ),
+    );
+  }
+}
+  
+  // Helper method to parse time strings to minutes
+  int _parseTimeToMinutes(String time) {
+    // Remove any spaces and convert to lowercase for consistent parsing
+    String cleanTime = time.toLowerCase().replaceAll(' ', '');
+    
+    // Handle "2+ hours" or similar cases
+    if (cleanTime.contains('+')) {
+      cleanTime = cleanTime.replaceAll('+', '');
+    }
+    
+    // Case 1: Contains "hour" and "min" (e.g., "1hour15mins")
+    if (cleanTime.contains('hour') && cleanTime.contains('min')) {
+      // Extract hours
+      final hourMatch = RegExp(r'(\d+)hour').firstMatch(cleanTime);
+      int hours = hourMatch != null ? int.parse(hourMatch.group(1)!) : 0;
+      
+      // Extract minutes
+      final minMatch = RegExp(r'(\d+)min').firstMatch(cleanTime);
+      int minutes = minMatch != null ? int.parse(minMatch.group(1)!) : 0;
+      
+      return (hours * 60) + minutes;
+    }
+    
+    // Case 2: Contains "hour" only (e.g., "1hour", "2hours")
+    else if (cleanTime.contains('hour')) {
+      final match = RegExp(r'(\d+)hour').firstMatch(cleanTime);
+      if (match != null) {
+        return int.parse(match.group(1)!) * 60;
+      }
+    }
+    
+    // Case 3: Contains "min" only (e.g., "15mins", "30mins")
+    else if (cleanTime.contains('min')) {
+      final match = RegExp(r'(\d+)min').firstMatch(cleanTime);
+      if (match != null) {
+        return int.parse(match.group(1)!);
+      }
+    }
+    
+    // Return 0 if parsing fails
+    return 0;
+  }
+
+  void _loadTodayRecipes() async {
+    if (_loadingTodayRecipes) return;
+    
+    setState(() => _loadingTodayRecipes = true);
+    
+    try {
+      final recipeMaps = await ApiService.getRecipes();
+      final recipes = recipeMaps.map((map) => Recipe.fromJson(map)).toList();
+      
+      // Take only first 3 recipes
+      setState(() {
+        _todayRecipes = recipes.take(3).toList();
+      });
+    } catch (e) {
+      print('❌ Error loading today recipes: $e');
+    } finally {
+      setState(() => _loadingTodayRecipes = false);
+    }
+  }
+
+  Future<void> _loadFavorites() async {
+    if (_isLoading || !mounted) return;
+    
+    setState(() => _isLoading = true);
+    
+    final recipeProvider = Provider.of<RecipeProvider>(context, listen: false);
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    
+    if (userProvider.userId == 0) {
+      if (mounted) setState(() => _isLoading = false);
       return;
     }
-
+    
     try {
-      final recipes = await _databaseService.getFilteredRecipes(
-        ingredients: selectedIngredients,
-        mood: selectedEmotion,
-        time: selectedTime,
-      );
-
-      setState(() {
-        personalizedRecipes = recipes;
-        showPersonalizedResults = true;
-      });
-
-      _showPersonalizedResults(recipes);
+      // Add delay to avoid build conflicts
+      await Future.delayed(const Duration(milliseconds: 10));
+      await recipeProvider.loadUserFavorites(userProvider.userId);
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error generating recipes: $e', style: text),
-          backgroundColor: Colors.red,
-        ),
+      debugPrint('Error loading favorites: $e');
+    }
+    
+    if (mounted) {
+      setState(() => _isLoading = false);
+    }
+  }
+  
+  @override
+  void initState() {
+    super.initState();
+    _loadTodayRecipes();
+    _loadIngredients();
+      _loadFavorites();
+    
+    //Load all recipes into RecipeProvider
+  //   WidgetsBinding.instance.addPostFrameCallback((_) {
+  //   final recipeProvider = Provider.of<RecipeProvider>(context, listen: false);
+  //   recipeProvider.loadRecipes();
+  // });
+  }
+
+// update didChangeDependencies
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    
+    // Load recipes only once
+    if (!_recipesLoaded) {
+      _recipesLoaded = true;
+      
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          try {
+            final recipeProvider = Provider.of<RecipeProvider>(context, listen: false);
+            recipeProvider.loadRecipes();
+          } catch (e) {
+            debugPrint('⚠️ Could not load recipes: $e');
+          }
+        }
+      });
+    }
+  }
+  
+  void _logout() async {
+    // 1. Clear all user data from provider
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    final recipeProvider = Provider.of<RecipeProvider>(context, listen: false);
+    userProvider.logout();
+    recipeProvider.logout();    
+    // 2. Navigate to login (clear navigation stack)
+    if (mounted) {
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (context) => LoginScreen()),
+        (route) => false, // Remove all previous routes
       );
     }
   }
 
-  void _showPersonalizedResults(List<Map<String, dynamic>> recipes) {
+  void _showPersonalizedResults(List<Recipe> recipes) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: Colors.black,
         title: Text(
-          'Personalized Recipes',
+          'Personalized Recipes (${recipes.length})',
           style: title.copyWith(fontSize: 24),
         ),
         content: SizedBox(
           width: double.maxFinite,
           child: recipes.isEmpty
               ? Text('No recipes found with your criteria', style: text)
-              : ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: recipes.length,
-                  itemBuilder: (context, index) {
-                    final recipe = recipes[index];
-                    return _buildPersonalizedRecipeCard(recipe);
-                  },
+              : SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      ...recipes.map(
+                        (recipe) => Column(
+                          children: [
+                            _buildPersonalizedRecipeCard(recipe),
+                            const SizedBox(height: 10),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
         ),
         actions: [
@@ -126,13 +328,35 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
-
-  Widget _buildPersonalizedRecipeCard(Map<String, dynamic> recipe) {
-    List<String> ingredients = List<String>.from(
-      json.decode(recipe['ingredients']),
+  
+  // Update your _getIngredientName method to handle API data
+  String _getIngredientName(int id) {
+    if (allIngredients.isEmpty) {
+      // Load ingredients if not loaded
+      _loadIngredients();
+      return 'Loading...';
+    }
+    
+    final ingredient = allIngredients.firstWhere(
+      (ing) => ing['id'] == id,
+      orElse: () => {'name': 'Unknown'},
     );
-    List<String> moods = List<String>.from(json.decode(recipe['mood']));
+    return ingredient['name'];
+  }
 
+  // Add a method to load ingredients
+  Future<void> _loadIngredients() async {
+    try {
+      final ingredients = await ApiService.getIngredients();
+      setState(() {
+        allIngredients = ingredients;
+      });
+    } catch (e) {
+      print('Error loading ingredients: $e');
+    }
+  }
+
+  Widget _buildPersonalizedRecipeCard(Recipe recipe) {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
@@ -145,14 +369,18 @@ class _HomeScreenState extends State<HomeScreen> {
           height: 50,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(8),
-            image: DecorationImage(
-              image: AssetImage(recipe['image']),
-              fit: BoxFit.cover,
-            ),
+          ),
+          child: CachedProfileImage(
+            imagePath: recipe.imagePath,
+            radius: 8,
+            isProfilePicture: false,
+            width: 50,
+            height: 50,
+            fit: BoxFit.cover,
           ),
         ),
         title: Text(
-          recipe['name'],
+          recipe.name,
           style: const TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
@@ -162,13 +390,19 @@ class _HomeScreenState extends State<HomeScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Time: ${recipe['time']}',
+              'Time: ${recipe.cookingTime}',
               style: const TextStyle(color: Colors.orange),
             ),
-            Text(
-              'Mood: ${moods.join(', ')}',
-              style: const TextStyle(color: Colors.white70, fontSize: 12),
-            ),
+            if (recipe.moods.isNotEmpty)
+              Text(
+                'Mood: ${recipe.moods.join(', ')}',
+                style: const TextStyle(color: Colors.white70, fontSize: 12),
+              ),
+            if (recipe.category.isNotEmpty)
+              Text(
+                'Category: ${recipe.category}',
+                style: const TextStyle(color: Colors.white70, fontSize: 12),
+              ),
           ],
         ),
         trailing: const Icon(
@@ -184,12 +418,12 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  void _showRecipeDetails(Map<String, dynamic> recipe) {
+  void _showRecipeDetails(Recipe recipe) {
     // Navigate to Recipe Detail Screen
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => RecipeDetailScreen(recipe: recipe),
+        builder: (context) => RecipeDetailScreen(initialRecipe: recipe),
       ),
     );
   }
@@ -199,22 +433,68 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       key: _scaffoldKey,
       drawer: _buildSideMenu(),
-      appBar: AppBar(
+       appBar: AppBar(
         backgroundColor: Colors.black,
         elevation: 0,
         leading: Padding(
-          padding: const EdgeInsets.only(left: 30, top: 30),
+          padding: const EdgeInsets.only(left: 30, top: 20),
           child: GestureDetector(
             onTap: () {
               _scaffoldKey.currentState?.openDrawer();
             },
-            child: Image.asset(
-              'assets/icons/hamburger.png',
-              width: 24,
-              height: 24,
-            ),
+            
+              child: const Icon(
+                Icons.menu,
+                color: Colors.orange,
+                size: iconSize,
+              ),
           ),
         ),
+        // Add actions (right side buttons)
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(top: 10, right: 20),
+            child: Row(
+              children: [
+                // Add Recipe Icon
+                GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const RecipeUploadScreen(),
+                      ),
+                    );
+                  },
+                  child: const Icon(
+                    Icons.add_circle,
+                    color: Colors.orange,
+                    size: iconSize,
+                  ),
+                ),
+                const SizedBox(width: 20),
+                
+                // Favorites Icon
+                GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const FavoritesScreen(),
+                      ),
+                    );
+                  },
+                  child: const Icon(
+                    Icons.favorite,
+                    color: Colors.orange,
+                    size: iconSize,
+                  ),
+                ),
+                const SizedBox(width: 10), // Adjust spacing
+              ],
+            ),
+          ),
+        ],
       ),
 
       body: Container(
@@ -299,57 +579,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     const SizedBox(height: 15),
 
-                    // Personalized Results (if any)
-                    if (showPersonalizedResults &&
-                        personalizedRecipes.isNotEmpty) ...[
-                      Text("Personalized For You", style: mediumtitle),
-                      const SizedBox(height: 10),
-                      ...personalizedRecipes
-                          .take(3)
-                          .map(
-                            (recipe) => Column(
-                              children: [
-                                _buildPersonalizedRecipeCard(recipe),
-                                const SizedBox(height: 10),
-                              ],
-                            ),
-                          ),
-                      const SizedBox(height: 20),
-                    ],
-
                     // Regular Recipe Cards
-                    ListView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: 3,
-                      itemBuilder: (context, index) {
-                        final recipe = {
-                          'name': 'Sample Recipe ${index + 1}',
-                          'time': '${15 + index * 10} mins',
-                          'image': 'assets/recipes/test.png',
-                          'isFavorite': false,
-                          'category': 'Main Course',
-                          'calories': '${300 + index * 100}',
-                          'ingredients': [
-                            'Ingredient 1',
-                            'Ingredient 2',
-                            'Ingredient 3'
-                          ],
-                          'steps': [
-                            'Step 1: Prepare ingredients',
-                            'Step 2: Cook according to instructions',
-                            'Step 3: Serve hot'
-                          ],
-                          'mood': ['Comfort', 'Healthy']
-                        };
-                        return Column(
-                          children: [
-                            buildRecipeCard(recipe),
-                            const SizedBox(height: 20),
-                          ],
-                        );
-                      },
-                    ),
+                    _buildRecipeList(),
                     const SizedBox(height: 30),
                   ],
                 ),
@@ -403,39 +634,32 @@ class _HomeScreenState extends State<HomeScreen> {
           const SizedBox(height: 15),
 
           // Ingredients Selection
-          DropdownSearch<String>.multiSelection(
-            items: ingredients,
-            popupProps: PopupPropsMultiSelection.menu(
-              showSearchBox: true,
-              searchFieldProps: TextFieldProps(
-                decoration: InputDecoration(
-                  hintText: "Search ingredients...",
-                  hintStyle: const TextStyle(color: Colors.white70),
-                  filled: true,
-                  fillColor: Colors.grey[900],
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                "Select Ingredients",
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
-              menuProps: MenuProps(
-                backgroundColor: const Color.fromARGB(255, 237, 229, 229),
+              const SizedBox(height: 8),
+              IngredientSelector(
+                selectedIds: selectedIngredientIds, // Use the new variable
+                onSelectionChanged: (List<int> ids) {
+                  setState(() {
+                    selectedIngredientIds = ids;
+                    // Convert IDs to names for your existing filtering logic
+                    selectedIngredients = ids.map((id) => _getIngredientName(id)).toList();
+                  });
+                },
+                hintText: "Search ingredients...",
+                allowAddingNew: false,
               ),
-            ),
-            onChanged: (List<String>? selectedItems) {
-              setState(() {
-                selectedIngredients = selectedItems ?? [];
-              });
-            },
-            selectedItems: selectedIngredients,
-            dropdownDecoratorProps: DropDownDecoratorProps(
-              dropdownSearchDecoration: InputDecoration(
-                hintText: "Select ingredients",
-                hintStyle: const TextStyle(color: Colors.white70),
-                border: const OutlineInputBorder(),
-                filled: true,
-                fillColor: Colors.black.withOpacity(0.3),
-              ),
-            ),
+            ],
           ),
-
           const SizedBox(height: 15),
 
           // Time Selection
@@ -472,7 +696,7 @@ class _HomeScreenState extends State<HomeScreen> {
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-              onPressed: _generateRecipes,
+              onPressed: _generatePersonalisedRecipes,
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.orange,
                 padding: const EdgeInsets.symmetric(vertical: 15),
@@ -485,7 +709,9 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget buildRecipeCard(Map<String, dynamic> recipe) {
+  Widget buildRecipeCard(Recipe recipe) {
+    final recipeProvider = Provider.of<RecipeProvider>(context);
+    bool isFavorite = recipeProvider.isFavorite(recipe.id);
     return GestureDetector(
       onTap: () {
         _showRecipeDetails(recipe);
@@ -514,10 +740,14 @@ class _HomeScreenState extends State<HomeScreen> {
                 height: 54,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(10),
-                  image: DecorationImage(
-                    image: AssetImage(recipe['image']),
-                    fit: BoxFit.cover,
-                  ),
+                ),
+                child: CachedProfileImage(
+                  imagePath: recipe.imagePath,
+                  radius: 10,
+                  isProfilePicture: false,
+                  width: 66,
+                  height: 54,
+                  fit: BoxFit.cover,
                 ),
               ),
             ),
@@ -527,7 +757,7 @@ class _HomeScreenState extends State<HomeScreen> {
               left: 100,
               top: 13,
               child: Text(
-                recipe['name'],
+                recipe.name,
                 style: const TextStyle(
                   fontFamily: 'Lora',
                   fontSize: 17.5,
@@ -546,7 +776,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   const Icon(Icons.access_time, color: Colors.white, size: 16),
                   const SizedBox(width: 5),
                   Text(
-                    recipe['time'],
+                    recipe.cookingTime,
                     style: const TextStyle(
                       fontFamily: 'Lora',
                       fontSize: 12,
@@ -567,7 +797,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   // Toggle favorite logic
                 },
                 child: Icon(
-                  recipe['isFavorite'] ? Icons.favorite : Icons.favorite_border,
+                  isFavorite ? Icons.favorite : Icons.favorite_border,
                   color: Colors.orange,
                   size: 25,
                 ),
@@ -580,6 +810,19 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildSideMenu() {
+    
+    // Load profile picture when menu opens
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
+    String? imagePath = await ApiService.getProfilePicture(userProvider.userId);
+    
+    // Check mounted BEFORE updating UI
+    if (mounted && imagePath != null && imagePath.isNotEmpty) {
+      userProvider.updateProfilePicture(imagePath);
+      setState(() {});
+    }
+    });
+
     return Container(
       width: MediaQuery.of(context).size.width * 0.9,
       decoration: BoxDecoration(
@@ -625,15 +868,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 Row(
                   children: [
                     Consumer<UserProvider>(
-                          builder: (context, userProvider, child) {
-                            return CircleAvatar(
-                              radius: 60,
-                              backgroundImage: userProvider.user?.profileImage != null
-                                  ? FileImage(File(userProvider.user!.profileImage!))
-                                  : const AssetImage('assets/login/noPicture.png') as ImageProvider,
-                            );
-                          },
-                        ),
+                    builder: (context, userProvider, child) {
+                      return CachedProfileImage(imagePath: userProvider.profilePicture,radius: 60);
+                    },
+                  ),
                     const SizedBox(width: 25),
                      Consumer<UserProvider>(
                         builder: (context, userProvider, child) {
@@ -660,30 +898,35 @@ class _HomeScreenState extends State<HomeScreen> {
 
                 // Menu Items
                 _buildMenuItem(Icons.home, "Home", () {
-                  Navigator.pop(context);
-                }),
-                const SizedBox(height: 20),
-                _buildMenuItem(Icons.favorite, "Favorites", () {
-                  Navigator.pop(context);
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const FavoritesScreen(),
-                    ),
-                  );
-                }),
+                Navigator.pop(context);
+              }),
+              const SizedBox(height: 20),
+              _buildMenuItem(Icons.restaurant_menu, "My Recipes", () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => RecipesScreen(showUserRecipesOnly: true),
+                  ),
+                );
+              }),
+              const SizedBox(height: 20),
+              _buildMenuItem(Icons.favorite, "Favorites", () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const FavoritesScreen(),
+                  ),
+                );
+              }),
                 const SizedBox(height: 20),
                 _buildMenuItem(Icons.help, "Help", () {
                   Navigator.pop(context);
                 }),
                 const Spacer(),
                 _buildMenuItem(Icons.logout, "Logout", () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const LoginScreen(),
-                    ),
-                  );
+                  _logout();
                 }),
               ],
             ),
@@ -701,4 +944,27 @@ class _HomeScreenState extends State<HomeScreen> {
       contentPadding: EdgeInsets.zero,
     );
   }
+
+  Widget _buildRecipeList() {
+  if (_loadingTodayRecipes) {
+    return Center(child: CircularProgressIndicator(color: Colors.orange));
+  }
+  
+  if (_todayRecipes.isEmpty) {
+    return Center(
+      child: Text('No recipes available', style: text),
+    );
+  }
+  
+  return Column(
+    children: _todayRecipes.map((recipe) {
+      return Column(
+        children: [
+          buildRecipeCard(recipe),
+          const SizedBox(height: 20),
+        ],
+      );
+    }).toList(),
+  );
+}
 }

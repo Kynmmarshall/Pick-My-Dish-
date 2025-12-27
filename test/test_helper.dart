@@ -1,7 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:pick_my_dish/Providers/recipe_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:pick_my_dish/Providers/user_provider.dart';
 import 'package:pick_my_dish/Screens/recipe_screen.dart';
+
+class FakeFavoriteProvider extends ChangeNotifier {
+  List<dynamic> favorites = [];
+  List<int> favoriteIds = [];
+  
+  bool isFavorite(dynamic recipe) => false;
+  
+  Future<void> toggleFavorite(dynamic recipe) async {}
+  
+  Future<void> loadFavorites() async {}
+}
 
 // Helper to create test recipes
 List<Map<String, dynamic>> createTestRecipes({int count = 5}) {
@@ -15,13 +27,6 @@ List<Map<String, dynamic>> createTestRecipes({int count = 5}) {
   });
 }
 
-// Helper to reset recipe favorites
-void resetRecipeFavorites() {
-  RecipesScreenState.allRecipes.forEach((recipe) {
-    recipe['isFavorite'] = false;
-  });
-}
-
 // Test wrapper for widgets
 Widget createTestableWidget(Widget child) {
   return MaterialApp(
@@ -30,9 +35,11 @@ Widget createTestableWidget(Widget child) {
   
 }
 
+// test_helper.dart
 Widget wrapWithProviders(Widget child) {
   return MultiProvider(
     providers: [
+      ChangeNotifierProvider(create: (_) => RecipeProvider()),
       ChangeNotifierProvider(create: (_) => UserProvider()),
     ],
     child: MaterialApp(

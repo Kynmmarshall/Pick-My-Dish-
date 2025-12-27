@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
+import 'package:pick_my_dish/Providers/recipe_provider.dart';
 import 'package:pick_my_dish/Providers/user_provider.dart';
 import 'package:pick_my_dish/Screens/login_screen.dart';
 import 'package:pick_my_dish/Services/api_service.dart';
 import 'package:pick_my_dish/constants.dart';
+import 'package:pick_my_dish/widgets/cached_image.dart';
 import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -24,7 +28,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
   super.initState();
   final userProvider = Provider.of<UserProvider>(context, listen: false);
   usernameController.text = userProvider.username;
+  _loadProfilePicture();
 }
+
+  void _loadProfilePicture() async {
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    String? imagePath = await ApiService.getProfilePicture(userProvider.userId);
+    
+    // Check mounted BEFORE updating UI
+    if (mounted && imagePath != null && imagePath.isNotEmpty) {
+      userProvider.updateProfilePicture(imagePath);
+      setState(() {});
+    }
+  }
 
   void _saveProfile() async {
   // Add this check first
@@ -56,6 +72,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 }
 
+  void _logout() async {
+    // 1. Clear all user data from provider
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    final recipeProvider = Provider.of<RecipeProvider>(context, listen: false);
+    userProvider.logout();
+    recipeProvider.logout();   
+    
+    // 2. Navigate to login (clear navigation stack)
+    if (mounted) {
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (context) => LoginScreen()),
+        (route) => false, // Remove all previous routes
+      );
+    }
+  }
+
   void _cancelEdit() {
     setState(() {
      // usernameController.text = ;
@@ -65,24 +98,54 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   void _pickImage() async {
     final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+    final pickedFile = await picker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 800,
+      maxHeight: 800,
+    );
     
-    if (pickedFile != null && context.mounted) {
-      final userProvider = Provider.of<UserProvider>(context, listen: false);
-      bool success = await ApiService.updateProfilePicture(
-        pickedFile.path, 
-        userProvider.userId
-      );
+    if (pickedFile == null) return;
+    
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    
+    bool success = await ApiService.uploadProfilePicture(
+      File(pickedFile.path),
+      userProvider.userId
+    );
+    
+    // Check mounted FIRST before using context
+    if (!mounted) return;
+    
+    if (success) {
+      // Get actual filename
+      String? actualImagePath = await ApiService.getProfilePicture(userProvider.userId);
       
-      if (success) {
-        userProvider.updateProfilePicture(pickedFile.path);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Profile picture updated!', style: text),
-            backgroundColor: Colors.green,
-          ),
-        );
+      // Check mounted again after async
+      if (!mounted) return;
+      
+      if (actualImagePath != null) {
+        // Clear old cache before updating
+        final cacheManager = DefaultCacheManager();
+        await cacheManager.removeFile('http://38.242.246.126:3000/${userProvider.profilePicture}');
+        userProvider.updateProfilePicture(actualImagePath);
+        setState(() {});
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Profile picture updated!', style: text),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
       }
+    } else if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to update picture', style: text),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
@@ -127,12 +190,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       children: [
                         Consumer<UserProvider>(
                           builder: (context, userProvider, child) {
-                            return CircleAvatar(
-                              radius: 60,
-                              backgroundImage: userProvider.user?.profileImage != null
-                                  ? FileImage(File(userProvider.user!.profileImage!))
-                                  : const AssetImage('assets/login/noPicture.png') as ImageProvider,
-                            );
+                            return CachedProfileImage(imagePath: userProvider.profilePicture,radius: 60,);
                           },
                         ),
                         Positioned(
@@ -157,10 +215,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ],
                     ),
                     const SizedBox(height: 30),
-
-                    // Username Section
-                    Text("Username", style: mediumtitle),
-                    const SizedBox(height: 10),
 
                     // FIX: Always render TextField but control visibility
                     _isEditing
@@ -265,13 +319,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           _buildInfoRow(
                             Icons.email,
                             "Email",
-                            "kynmmarshall@example.com",
+                            Provider.of<UserProvider>(context).email,
                           ),
                           const SizedBox(height: 10),
-                          _buildInfoRow(
+                          Consumer<UserProvider>(
+                          builder: (context, userProvider, child) {
+                            return _buildInfoRow(
                             Icons.cake,
                             "Member since",
-                            "January 2024",
+                            DateFormat('d MMMM yyyy').format(userProvider.user?.joinedDate ?? DateTime.now()),
+                          );
+                          },
                           ),
                           const SizedBox(height: 10),
                           _buildInfoRow(
@@ -291,14 +349,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       child: ElevatedButton(
                         key: const Key('logout_button'), // FIX: Add key
                         onPressed: () {
-                          if (context.mounted) {
-                            Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const LoginScreen(),
-                            ),
-                          );
-                          }
+                          _logout();
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.red,

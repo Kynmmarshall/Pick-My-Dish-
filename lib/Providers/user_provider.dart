@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:pick_my_dish/Models/user_model.dart';
 
 /// Provider that holds and manages the current authenticated user.
@@ -9,22 +10,20 @@ class UserProvider with ChangeNotifier {
   // Backing field for the current user. Null when no user is logged in.
   User? _user;
   int _userId = 0;
-
+  DateTime _joined = DateTime.now();
   /// Returns the current user, or null if not signed in.
   User? get user => _user;
-
+  String _profilePicture = 'assets/login/noPicture.png';
+  String get profilePicture => _profilePicture;
   /// Returns the username of the current user, or a default 'User' string
   /// when no user is available.
-  String get username => _user?.username ?? 'User';  
+  String get username => _user?.username ?? 'Guest';  
   int get userId => _userId;  
 
-
-  /// Returns the first name of the current user extracted from fullName,
-  /// or falls back to username, or 'User' if no user is available.
-  String get firstName => _user?.firstName ?? username;
-
-  /// Returns the full name of the current user, or empty string if not available.
-  String get fullName => _user?.fullName ?? '';
+  // Add these for complete cleanup
+  List<Map<String, dynamic>> _userRecipes = [];
+  List<int> _userFavorites = [];
+  Map<String, dynamic> _userSettings = {};
 
   /// Returns the email of the current user, or empty string if not available.
   String get email => _user?.email ?? '';
@@ -35,6 +34,7 @@ class UserProvider with ChangeNotifier {
   /// Indicates whether a user is currently logged in.
   bool get isLoggedIn => _user != null;
 
+  
   /// Set (or replace) the current user and notify listeners.
   ///
   /// Call this after a successful login or when user data is fetched.
@@ -62,24 +62,13 @@ class UserProvider with ChangeNotifier {
     }
   }
 
-  /// Update the user's full name and notify listeners.
-  ///
-  /// If there is no current user, this method does nothing.
-  void updateFullName(String newFullName) {
-    if (_user != null) {
-      _user = _user!.copyWith(fullName: newFullName);
-      notifyListeners();
-    }
-  }
 
   /// Update the user's profile image and notify listeners.
   ///
   /// If there is no current user, this method does nothing.
-  void updateProfilePicture(String ImagePath) {
-    if (_user != null) {
-      _user = _user!.copyWith(profileImage: ImagePath);
-      notifyListeners();
-    }
+  void updateProfilePicture(String imagePath) {
+    _profilePicture = imagePath;
+    notifyListeners();
   }
 
 
@@ -99,7 +88,58 @@ class UserProvider with ChangeNotifier {
       debugPrint('UserProvider: No user logged in');
     } else {
       debugPrint('UserProvider: Current user - ${_user!.toString()}');
-      debugPrint('UserProvider: First name - $firstName');
+      debugPrint('UserProvider: First name - $username');
     }
+  }
+  
+  
+  /// Clear ALL user data
+  void clearAllUserData() {
+    _user = null;
+    _userId = 0;
+    _profilePicture = 'assets/login/noPicture.png';
+    _userRecipes = [];
+    _userFavorites = [];
+    _userSettings = {};
+    
+    // Clear image cache
+    _clearImageCache();
+    
+    // Clear local storage (optional)
+    _clearLocalStorage();
+    
+    notifyListeners();
+  }
+
+  Future<void> _clearImageCache() async {
+    try {
+      final cacheManager = DefaultCacheManager();
+      
+      // Clear ALL cached images (more thorough)
+      await cacheManager.emptyCache();
+      
+      // OR clear only specific profile picture URLs
+      // if you want more targeted clearing:
+      if (_profilePicture.startsWith('http')) {
+        await cacheManager.removeFile(_profilePicture);
+      }
+      
+      debugPrint('🗑️ Image cache cleared');
+    } catch (e) {
+      debugPrint('⚠️ Error clearing cache: $e');
+    }
+  }
+
+  Future<void> _clearLocalStorage() async {
+    // Implement local storage clearing if using packages like SharedPreferences
+    // Example:
+    // final prefs = await SharedPreferences.getInstance();
+    // await prefs.clear();
+  }
+
+  /// Logout - clear everything
+  void logout() {
+    clearAllUserData();
+    debugPrint('✅ User logged out - all data cleared');
   }
 }
