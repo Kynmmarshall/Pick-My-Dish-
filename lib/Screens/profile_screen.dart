@@ -335,7 +335,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           _buildInfoRow(
                             Icons.favorite,
                             "Favorite Recipes",
-                            "12 recipes",
+                            "${Provider.of<RecipeProvider>(context).favorites.length} recipes",
                           ),
                         ],
                       ),
