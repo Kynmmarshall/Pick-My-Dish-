@@ -1,361 +1,601 @@
-% PickMyDish_SRS.tex
-\documentclass[12pt,a4paper]{report}
-\usepackage[utf8]{inputenc}
+\documentclass[12pt,a4paper]{article}
 \usepackage{geometry}
 \usepackage{hyperref}
-\usepackage{longtable}
-\usepackage{array}
+\usepackage{graphicx}
+\usepackage{listings}
+\usepackage{xcolor}
 \usepackage{enumitem}
+\usepackage{tabularx}
+\usepackage{booktabs}
+\usepackage{float}
 \usepackage{titlesec}
 \usepackage{fancyhdr}
-\usepackage{setspace}
-\usepackage{caption}
-\usepackage{bookmark}
+\usepackage{lipsum}
 
-\geometry{margin=1in}
-\setstretch{1.15}
-\titleformat{\chapter}{\Large\bfseries}{\thechapter.}{0.5em}{}
-\titleformat{\section}{\large\bfseries}{\thesection}{0.5em}{}
+% Page layout
+\geometry{
+    left=2.5cm,
+    right=2.5cm,
+    top=2.5cm,
+    bottom=2.5cm,
+    headheight=15pt
+}
 
+% Colors
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+\definecolor{darkblue}{rgb}{0,0,0.5}
+
+% Header and footer
 \pagestyle{fancy}
 \fancyhf{}
-\fancyhead[L]{PickMyDish — SRS}
-\fancyhead[R]{\thepage}
-\renewcommand{\headrulewidth}{0.4pt}
+\fancyhead[L]{\leftmark}
+\fancyhead[R]{Pick My Dish SRS}
+\fancyfoot[C]{\thepage}
+
+% Title formatting
+\titleformat{\section}{\large\bfseries\color{darkblue}}{\thesection}{1em}{}
+\titleformat{\subsection}{\normalsize\bfseries}{\thesubsection}{1em}{}
+\titleformat{\subsubsection}{\small\bfseries}{\thesubsubsection}{1em}{}
+
+% List settings
+\setlist[itemize]{leftmargin=*, noitemsep}
+\setlist[enumerate]{leftmargin=*, noitemsep}
+
+% Table settings
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+
+% Document metadata
+\title{
+    \textbf{Software Requirements Specification (SRS) Document} \\
+    \large Project: Pick My Dish – Recipe \& Cooking Assistant \\
+    \normalsize Version: 1.0
+}
+\author{Development Team}
+\date{November 2025}
 
 \begin{document}
 
-\begin{titlepage}
-    \centering
-    {\Huge \bfseries Software Requirements Specification}\\[0.6cm]
-    {\Large \bfseries PickMyDish: What Should I Eat Today?}\\[1.2cm]
-    {\Large Prepared by: \underline{Project Team}}\\[0.3cm]
-    {\large Course: Software Design and Modelling}\\[2.0cm]
-    {\large Version: 1.0}\\[0.1cm]
-    {\large Date: \today}
-    \vfill
-    \begin{flushleft}
-    \textbf{Document History:}\\
-    \begin{tabular}{p{2.5cm} p{9cm}}
-    Version & Notes \\
-    \hline
-    1.0 & Initial SRS, based on project proposal \\
+\maketitle
+
+\begin{center}
+    \rule{\textwidth}{1pt}
+\end{center}
+
+\begin{abstract}
+    This document outlines the software requirements for \textbf{Pick My Dish}, a Flutter-based mobile application that provides personalized recipe recommendations based on user preferences, ingredients, cooking time, and mood. It serves as a comprehensive guide for developers, testers, project managers, and stakeholders.
+\end{abstract}
+
+\vspace{1cm}
+\begin{center}
+    \textbf{Approval Signatures}
+    
+    \vspace{0.5cm}
+    \begin{tabular}{p{0.3\textwidth}p{0.3\textwidth}p{0.3\textwidth}}
+        \hline
+        \textbf{Product Owner} & \textbf{Project Manager}\\
+        \hline
+        & & \\
+        Name:KAMDEU YAMDDJEUSON NEIL MARSHALL & Name:TUHEU TCHOUBI PEMPEME MOUSSA FAHDIL \\
+        Date:1/11/2025 & Date:1/11/2025\\
+        \hline
     \end{tabular}
-    \end{flushleft}
-\end{titlepage}
+\end{center}
 
-\pagenumbering{roman}
-\tableofcontents
-\listoftables
-\listoffigures
 \newpage
-\pagenumbering{arabic}
 
-\chapter{Introduction}
-\section{Purpose}
-This Software Requirements Specification (SRS) document describes the functional and non-functional requirements, interfaces, data models, constraints, and acceptance criteria for \emph{PickMyDish} — a mobile application that helps users decide what to eat based on (1) ingredients they already have, (2) their current mood, and (3) the time available to prepare a meal.
+\tableofcontents
+\newpage
 
-\section{Scope}
-PickMyDish is a cross-platform mobile application built with Flutter. It will provide:
+\section{Introduction}
+\label{sec:introduction}
+
+\subsection{Purpose}
+This document outlines the software requirements for \textbf{Pick My Dish}, a Flutter-based mobile application that provides personalized recipe recommendations based on user preferences, ingredients, cooking time, and mood. It serves as a comprehensive guide for developers, testers, project managers, and stakeholders.
+
+\subsection{Scope}
+\textbf{Pick My Dish} is a cross-platform mobile application that allows users to:
 \begin{itemize}
-    \item Personalized recipe suggestions.
-    \item Quick filtering based on ingredients, mood, and available time.
-    \item Recipe details with images, ingredients list, step-by-step instructions.
-    \item Ability to upload recipes and images.
-    \item User accounts, profile management, and favorites.
-    \item Offline support via local SQLite storage.
+    \item Browse, search, and filter recipes.
+    \item Upload, edit, and delete their own recipes.
+    \item Personalize recipe recommendations based on ingredients, cooking time, and emotions.
+    \item Mark recipes as favorites.
+    \item Manage user profiles with profile pictures and usernames.
+    \item View detailed recipe instructions, ingredients, and nutritional information.
 \end{itemize}
 
-\section{Intended audience}
-\begin{itemize}
-    \item Course instructor and assessors.
-    \item Developers implementing the application.
-    \item Testers and QA engineers.
-    \item End-user representatives (for acceptance criteria).
-\end{itemize}
+The system interfaces with a RESTful backend server (Node.js + MySQL) for data storage and retrieval. The app is developed using \textbf{Flutter} and follows the \textbf{MVVM architecture} with \textbf{Provider} for state management.
 
-\section{References}
-The SRS is derived from the project proposal and architecture description provided by the team. :contentReference[oaicite:1]{index=1}
-
-\section{Definitions, acronyms and abbreviations}
-\begin{description}
-    \item[API] Application Programming Interface
-    \item[UI] User Interface
-    \item[SRS] Software Requirements Specification
-    \item[DB] Database
-    \item[CRUD] Create, Read, Update, Delete
-    \item[JSON] JavaScript Object Notation
-\end{description}
-
-\chapter{Overall description}
-\section{Product perspective}
-PickMyDish is a new, standalone mobile application. It uses a RESTful backend (base URL: \texttt{http://38.242.246.126:3000}) and a local SQLite database for offline capability. The frontend is implemented with Flutter, using Provider for state management.
-
-\section{Product functions (high level)}
-\begin{itemize}
-    \item User authentication: register, login, guest login, Google sign-in.
-    \item Profile management: update username, upload profile picture.
-    \item Recipe browsing: view recipes, search, filter, view recipe detail.
-    \item Recipe personalization: find recipes by ingredients, mood, and time.
-    \item Favorites management: mark/unmark favorites, view favorites.
-    \item Recipe upload: create new recipes with optional image upload.
-    \item Offline persistence: cache recipes and images locally.
-\end{itemize}
-
-\section{User classes and characteristics}
-\begin{itemize}
-    \item \textbf{Anonymous user / Guest:} Can browse recipes and use basic features without saving data.
-    \item \textbf{Registered user:} Can save favorites, upload recipes, edit profile.
-    \item \textbf{Administrator / Maintainer (optional):} Manage backend data (not in scope for initial version).
-\end{itemize}
-
-\section{Operating environment}
-\begin{itemize}
-    \item Mobile devices: Android and iOS (Flutter).
-    \item Backend: REST API hosted at the configured server.
-    \item Local storage: SQLite (sqflite Flutter package).
-    \item Network: intermittent connectivity; app must support offline read and local changes queueing.
-\end{itemize}
-
-\section{Design and implementation constraints}
-\begin{itemize}
-    \item Must use Flutter SDK compatible with project configuration (proposal referenced SDK \textasciicircum3.9.2).
-    \item Use Provider for state management.
-    \item Use sqflite for local persistence.
-    \item Image caching via cached\_network\_image.
-    \item Backend URL is fixed for the initial version: \texttt{http://38.242.246.126:3000}.
-\end{itemize}
-
-\section{Assumptions and dependencies}
-\begin{itemize}
-    \item Backend API endpoints described in the proposal will be available and follow the expected contract.
-    \item The device has sufficient storage for caching images and local DB.
-    \item Users have Internet access for first-time sync; offline fallback will be supported thereafter.
-\end{itemize}
-
-\chapter{Specific requirements}
-
-\section{External interface requirements}
-
-\subsection{User interfaces}
-\begin{itemize}
-    \item Dark-themed UI with orange accents; Times New Roman font (times.ttf).
-    \item Screens: Splash, Login, Register, Home, Recipes list, Recipe detail, Favorites, Profile, Recipe upload.
-    \item Input fields must include validation (email format, password strength indicator).
-    \item Recipe cards: image, title, category, cooking time, favorite icon.
-\end{itemize}
-
-\subsection{Hardware interfaces}
-Standard mobile device sensors are optional (not required in initial version).
-
-\subsection{Software interfaces}
-\begin{itemize}
-    \item REST API endpoints for authentication, profile, recipe CRUD, image upload/download.
-    \item Local SQLite database schema as defined below.
-    \item Image caching and local cache manager APIs.
-\end{itemize}
-
-\subsection{Communication interfaces}
-HTTP(S) using JSON payloads and multipart/form-data for image uploads.
-
-\section{Functional requirements}
-Each functional requirement below has an ID for traceability.
-
-\subsection*{Authentication and user management}
-\begin{itemize}[leftmargin=*,label={}]
-    \item[FR-01] \textbf{User registration:} System shall allow a user to register providing username, email and password. Validation: unique email, password confirmation, password strength feedback.
-    \item[FR-02] \textbf{User login:} System shall allow registered users to log in with email and password; successful login returns user profile (id, username, email, profile image path).
-    \item[FR-03] \textbf{Guest login:} System shall allow user to login as guest with limited features.
-    \item[FR-04] \textbf{Google sign-in:} Optional integration for OAuth Google Sign-In.
-    \item[FR-05] \textbf{Update username:} Users can update their username (API: updateUsername).
-    \item[FR-06] \textbf{Profile picture upload:} Users can upload a profile image (multipart form-data).
-    \item[FR-07] \textbf{Logout:} Clear session, cached user data, and optionally clear local cache.
-\end{itemize}
-
-\subsection*{Recipe management}
-\begin{itemize}
-    \item[FR-08] \textbf{Fetch recipes:} System shall fetch a list of recipes from the server (getRecipes) and store locally.
-    \item[FR-09] \textbf{View recipe detail:} User can view full recipe details including name, category, cooking time, calories, list of ingredients, steps, mood tags, and image.
-    \item[FR-10] \textbf{Search and filter:} Users can search by name, category, and filter by mood and cooking time.
-    \item[FR-11] \textbf{Personalize suggestions:} Given a set of available ingredients, selected mood(s), and available time, system shall return matching recipes (personalizeRecipes).
-    \item[FR-12] \textbf{Upload recipe:} Authenticated users can create/upload recipes with optional image (multipart), providing name, category, time, calories, ingredients, instructions, mood tags.
-    \item[FR-13] \textbf{Favorites:} Users can mark/unmark recipes as favorite (toggleFavorite), and view favorites list.
-    \item[FR-14] \textbf{Offline mode:} Recipes loaded and favorited should be accessible offline via local SQLite DB.
-\end{itemize}
-
-\subsection*{Image handling}
-\begin{itemize}
-    \item[FR-15] \textbf{Image source detection:} Widget should detect if image path is local (assets/) or remote and build full URL for remote images using base path.
-    \item[FR-16] \textbf{Caching:} Remote images to be cached using cached\_network\_image and a cache manager.
-    \item[FR-17] \textbf{Loading/Error UI:} Display progress indicator while loading and a fallback icon on error.
-\end{itemize}
-
-\section{Non-functional requirements}
-\subsection{Performance}
-\begin{itemize}
-    \item[NFR-01] App should display recipes list within 2 seconds on a typical mobile network after initial cache check.
-    \item[NFR-02] Image loading should use cached images where available to reduce network latency.
-\end{itemize}
-
-\subsection{Reliability}
-\begin{itemize}
-    \item[NFR-03] The local DB must not lose user favorites on app restart.
-    \item[NFR-04] On intermittent network, the app must gracefully fall back to cached data and queue write operations when back online.
-\end{itemize}
-
-\subsection{Security}
-\begin{itemize}
-    \item[NFR-05] Passwords must be transmitted securely (HTTPS recommended for production).
-    \item[NFR-06] Sensitive tokens or session info must be stored securely in platform-appropriate secure storage.
-\end{itemize}
-
-\subsection{Usability}
-\begin{itemize}
-    \item[NFR-07] The UI shall be responsive and accessible on common screen sizes.
-    \item[NFR-08] Password strength feedback and clear validation messages must be provided.
-\end{itemize}
-
-\subsection{Maintainability}
-\begin{itemize}
-    \item[NFR-09] Code must follow clean architecture separation and be modular to support future features.
-\end{itemize}
-
-\subsection{Portability}
-\begin{itemize}
-    \item[NFR-10] Application must be buildable for both Android and iOS.
-\end{itemize}
-
-\section{Database requirements}
-\subsection{Schema}
-A local SQLite database (recipes.db) with table \texttt{recipes}:
-
-\begin{longtable}{p{4cm} p{10cm}}
-\hline
-\textbf{Column} & \textbf{Description / Type} \\
-\hline
-id & INTEGER PRIMARY KEY \\
-name & TEXT \\
-category & TEXT \\
-time & TEXT (e.g., '30 mins') \\
-calories & TEXT \\
-image & TEXT (path or URL) \\
-ingredients & TEXT (JSON encoded array) \\
-mood & TEXT (JSON encoded array) \\
-difficulty & TEXT \\
-steps & TEXT (JSON encoded array) \\
-isFavorite & INTEGER (0 or 1) \\
-\hline
-\end{longtable}
-
-\subsection{Initial data}
-Database to be pre-populated from \texttt{data/recipes.json} during first run.
-
-\section{API contract (summary)}
-\begin{enumerate}
-    \item \textbf{GET /testConnection} — health check
-    \item \textbf{POST /login} — body: \{email, password\}; response: user object + status
-    \item \textbf{POST /register} — body: \{username, email, password\}; response: success boolean or error
-    \item \textbf{PUT /user/username} — update username
-    \item \textbf{POST /user/profile-picture} — multipart upload
-    \item \textbf{GET /recipes} — fetch all recipes
-    \item \textbf{POST /recipes} — multipart create new recipe
-    \item \textbf{GET /recipes/{id}} — fetch single recipe
-\end{enumerate}
-
-(Exact request/response JSON shapes should be documented in the API specification implemented alongside the backend.)
-
-\chapter{Use cases}
-\section{Use case UC-01: Get recipe suggestion}
-\textbf{Primary actor:} Registered user (or guest)\\
-\textbf{Preconditions:} App launched; optional ingredients, mood, time provided.\\
-\textbf{Main flow:}
-\begin{enumerate}
-    \item User selects ingredients they have.
-    \item User selects mood and time constraint.
-    \item System filters recipes and returns ranked results.
-    \item User selects a recipe to view details.
-\end{enumerate}
-
-\section{Use case UC-02: Upload recipe}
-\textbf{Primary actor:} Registered user\\
-\textbf{Preconditions:} User authenticated.\\
-\textbf{Main flow:}
-\begin{enumerate}
-    \item User opens recipe upload screen.
-    \item User fills name, category, time, calories, ingredients, steps, mood tags and selects image.
-    \item User submits; system uploads recipe and image to server and updates local DB on success.
-\end{enumerate}
-
-\chapter{Acceptance criteria and test plan}
-\section{Acceptance criteria}
-\begin{itemize}
-    \item AC-01: User can register and login (email/password), and the returned profile matches UI state.
-    \item AC-02: Searching/filtering returns relevant recipes based on name, category, mood, time and ingredients.
-    \item AC-03: Favorites are persistent across app restarts and available offline.
-    \item AC-04: Recipe upload with image succeeds and appears in user's recipes.
-    \item AC-05: App gracefully handles network loss by using cached data.
-\end{itemize}
-
-\section{Testing strategy}
-\begin{itemize}
-    \item Unit tests for model parsing and utility functions (e.g., time-to-minutes conversion).
-    \item Widget tests for main screens (rendering, input fields, buttons).
-    \item Integration tests for major flows (login, fetch recipes, favorite/unfavorite, upload recipe).
-    \item Manual acceptance testing for UI/UX and performance validation on real devices.
-\end{itemize}
-
-\chapter{Traceability matrix}
-\begin{table}[h]
-\centering
-\begin{tabular}{|p{3cm}|p{9cm}|}
-\hline
-\textbf{Requirement ID} & \textbf{Mapped Test / Use Case} \\
-\hline
-FR-01, FR-02 & UC-Login, Test: Authentication unit/integration tests \\
-FR-08, FR-09, FR-10, FR-11 & UC-Get recipe suggestion, Test: Search/filter integration tests \\
-FR-12 & UC-Upload recipe, Test: Upload integration test \\
-FR-13 & UC-Favorites, Test: Favorite persistence tests \\
-FR-14 & UC-Offline behavior, Test: Offline acceptance tests \\
-\hline
-\end{tabular}
-\caption{Requirement-to-test mapping}
+\subsection{Definitions, Acronyms, and Abbreviations}
+\begin{table}[H]
+    \centering
+    \begin{tabularx}{\textwidth}{lY}
+        \toprule
+        \textbf{Term} & \textbf{Description} \\
+        \midrule
+        API & Application Programming Interface \\
+        UI & User Interface \\
+        SRS & Software Requirements Specification \\
+        MVVM & Model-View-ViewModel \\
+        JWT & JSON Web Token (for authentication) \\
+        VPS & Virtual Private Server \\
+        SQLite & Local database for offline storage \\
+        HTTP & Hypertext Transfer Protocol \\
+        FR & Functional Requirement \\
+        NFR & Non-Functional Requirement \\
+        \bottomrule
+    \end{tabularx}
+    \caption{Definitions and Acronyms}
 \end{table}
 
-\chapter{Appendices}
-\section{Appendix A: UI screen list}
-SplashScreen, LoginScreen, RegisterScreen, HomeScreen, RecipesScreen, RecipeDetailScreen, FavoritesScreen, ProfileScreen, RecipeUploadScreen.
-
-\section{Appendix B: Data model examples}
-\subsection*{Recipe JSON example}
-\begin{verbatim}
-{
-  "id": 1,
-  "name": "Tomato Pasta",
-  "category": "Main Course",
-  "time": "30 mins",
-  "calories": "400",
-  "image_path": "recipes/tomato_pasta.jpg",
-  "ingredients": ["pasta", "tomato", "olive oil"],
-  "steps": ["Boil pasta", "Make sauce", "Mix and serve"],
-  "mood": ["Comfort"],
-  "userId": 2
-}
-\end{verbatim}
-
-\section{Appendix C: Open issues and future enhancements}
+\subsection{References}
 \begin{itemize}
-    \item Add secure token refresh strategy and migrate backend to HTTPS in production.
-    \item Add recommendation ranking algorithm (machine learning) for better personalization.
-    \item Implement admin dashboard for content moderation.
-    \item Support recipe sharing and social features.
+    \item Flutter Documentation: \url{https://flutter.dev}
+    \item Provider Package: \url{https://pub.dev/packages/provider}
+    \item REST API Design Guidelines
+    \item Project Source Code Documentation
 \end{itemize}
 
-\chapter*{Approval}
-\begin{tabular}{p{6cm} p{6cm}}
-Prepared by: & Reviewed by: \\
-\vspace{2cm} & \vspace{2cm} \\
-Signature: & Signature: \\
-Date: \underline{\hspace{3cm}} & Date: \underline{\hspace{3cm}} \\
-\end{tabular}
+\subsection{Overview}
+This document is structured into sections that describe:
+\begin{itemize}
+    \item Overall system functionality
+    \item User roles and characteristics
+    \item Functional and non-functional requirements
+    \item Interface requirements
+    \item Constraints and assumptions
+\end{itemize}
+
+\newpage
+
+\section{Overall Description}
+\label{sec:overall-description}
+
+\subsection{Product Perspective}
+\textbf{Pick My Dish} is an independent mobile application that communicates with a backend server hosted on a VPS. The app is built using \textbf{Flutter} for cross-platform compatibility (iOS \& Android). It uses \textbf{SQLite} for local caching and \textbf{HTTP} for server communication.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{system-architecture.png}
+    \caption{System Architecture Overview}
+    \label{fig:system-architecture}
+\end{figure}
+
+\subsection{Product Functions}
+The primary functions of the system include:
+\begin{enumerate}
+    \item \textbf{User Authentication}: Register, login, and guest access.
+    \item \textbf{Recipe Management}: Browse, search, filter, upload, edit, and delete recipes.
+    \item \textbf{Personalization}: Generate recipe recommendations based on selected ingredients, cooking time, and mood.
+    \item \textbf{Favorites Management}: Add/remove recipes to/from favorites.
+    \item \textbf{User Profile Management}: Update username and profile picture.
+    \item \textbf{Admin Features}: Edit/delete any recipe (admin role).
+    \item \textbf{Offline Access}: Cached recipes and images for offline viewing.
+\end{enumerate}
+
+\subsection{User Characteristics}
+\begin{table}[H]
+    \centering
+    \begin{tabularx}{\textwidth}{lY}
+        \toprule
+        \textbf{User Type} & \textbf{Description} \\
+        \midrule
+        End Users & Home cooks, cooking enthusiasts, beginners. Regular users who browse, cook, and share recipes. \\
+        Admin Users & Content moderators or administrators with extended privileges to manage all recipes and users. \\
+        Guests & Users without an account. Have limited access to browse recipes but cannot save favorites or upload recipes. \\
+        \bottomrule
+    \end{tabularx}
+    \caption{User Characteristics}
+\end{table}
+
+\subsection{Constraints}
+\begin{itemize}
+    \item Must support \textbf{iOS 12+} and \textbf{Android 8.0+}.
+    \item Backend server must be reachable via public IP.
+    \item Maximum image upload size: \textbf{5 MB}.
+    \item Must comply with GDPR for user data (if applicable).
+    \item Development must follow Flutter best practices and Dart style guide.
+\end{itemize}
+
+\subsection{Assumptions and Dependencies}
+\begin{itemize}
+    \item Users have a stable internet connection for real-time data sync.
+    \item Backend server is maintained and available with 99\% uptime.
+    \item Users have basic familiarity with mobile applications.
+    \item The app will be distributed via Google Play Store and Apple App Store.
+    \item Third-party packages used are maintained and compatible with Flutter updates.
+\end{itemize}
+
+\newpage
+
+\section{System Features and Requirements}
+\label{sec:system-features}
+
+\subsection{Functional Requirements}
+\begin{table}[H]
+    \centering
+    \begin{tabularx}{\textwidth}{lYc}
+        \toprule
+        \textbf{ID} & \textbf{Requirement Description} & \textbf{Priority} \\
+        \midrule
+        FR1 & Users can register with email, username, and password with validation & High \\
+        FR2 & Users can log in with email/password or as guest & High \\
+        FR3 & Users can view a list of recipes with images, names, and cooking times & High \\
+        FR4 & Users can search recipes by name, category, or mood & Medium \\
+        FR5 & Users can filter recipes by ingredients, cooking time, and mood & Medium \\
+        FR6 & Logged-in users can upload new recipes with image, ingredients, steps, and mood tags & High \\
+        FR7 & Recipe owners or admins can edit recipe details & Medium \\
+        FR8 & Recipe owners or admins can delete recipes & Medium \\
+        FR9 & Users can add/remove recipes to/from favorites & High \\
+        FR10 & Users can update username and profile picture & Medium \\
+        FR11 & Users can generate personalized recipes based on selected criteria & High \\
+        FR12 & Users can view cached recipes without internet connection & Low \\
+        FR13 & Admins can edit/delete any recipe & Low \\
+        FR14 & System validates email format and password strength during registration & Medium \\
+        FR15 & System provides ingredient selector with search and add-new functionality & Medium \\
+        FR16 & System caches images for offline viewing & Low \\
+        \bottomrule
+    \end{tabularx}
+    \caption{Functional Requirements}
+\end{table}
+
+\subsection{Non-Functional Requirements}
+\begin{table}[H]
+    \centering
+    \begin{tabularx}{\textwidth}{lY}
+        \toprule
+        \textbf{ID} & \textbf{Requirement Description} \\
+        \midrule
+        NFR1 & \textbf{Performance}: App should load recipes within \textbf{2 seconds}. Image caching should reduce bandwidth usage. \\
+        NFR2 & \textbf{Usability}: Intuitive UI with consistent navigation, clear icons, and responsive design. \\
+        NFR3 & \textbf{Reliability}: 99\% uptime for backend server; graceful error handling with user-friendly messages. \\
+        NFR4 & \textbf{Security}: Passwords hashed using bcrypt; JWT for session management; input validation to prevent injection attacks. \\
+        NFR5 & \textbf{Compatibility}: Supports Flutter \textbf{3.9+}, iOS 12+, Android 8.0+, various screen sizes and resolutions. \\
+        NFR6 & \textbf{Scalability}: Backend supports up to \textbf{10,000 concurrent users} with horizontal scaling capability. \\
+        NFR7 & \textbf{Maintainability}: Modular code structure with clear separation of concerns (Models, Providers, Services, Screens). \\
+        NFR8 & \textbf{Availability}: System available 24/7 with maintenance windows announced in advance. \\
+        NFR9 & \textbf{Portability}: Single codebase runs on both iOS and Android without platform-specific modifications. \\
+        NFR10 & \textbf{Testability}: Comprehensive unit and integration test coverage; testable architecture patterns. \\
+        \bottomrule
+    \end{tabularx}
+    \caption{Non-Functional Requirements}
+\end{table}
+
+\newpage
+
+\section{External Interface Requirements}
+\label{sec:external-interfaces}
+
+\subsection{User Interfaces}
+The application includes the following main screens:
+\begin{itemize}
+    \item \textbf{Splash Screen}: Displays app logo and brief loading animation (3 seconds).
+    \item \textbf{Login/Register Screens}: Form-based authentication with validation and password strength indicator.
+    \item \textbf{Home Screen}: Personalized recommendations, today's recipes, side menu navigation.
+    \item \textbf{Recipe Screens}: List view, grid view, and detailed recipe view with step-by-step instructions.
+    \item \textbf{Profile Screen}: User information, edit options, profile picture management, logout.
+    \item \textbf{Upload/Edit Screens}: Comprehensive forms for recipe data entry, image picker, and ingredient selector.
+    \item \textbf{Favorites Screen}: Grid/list of favorited recipes with swipe-to-remove functionality.
+\end{itemize}
+
+\textbf{UI Design Principles}:
+\begin{itemize}
+    \item Consistent color scheme (black/orange/white)
+    \times Times New Roman font family for titles and text
+    \item Responsive layouts for various screen sizes
+    \item Intuitive navigation with clear visual hierarchy
+\end{itemize}
+
+\subsection{Hardware Interfaces}
+\begin{itemize}
+    \item \textbf{Camera/Gallery}: For uploading profile and recipe images via \texttt{image\_picker} package.
+    \item \textbf{Internet Connectivity}: Wi-Fi or mobile data for API calls and real-time updates.
+    \item \textbf{Storage}: Local device storage for caching images and SQLite database.
+    \item \textbf{Memory}: Minimum 1GB RAM recommended for smooth operation.
+\end{itemize}
+
+\subsection{Software Interfaces}
+\begin{table}[H]
+    \centering
+    \begin{tabularx}{\textwidth}{lY}
+        \toprule
+        \textbf{Component} & \textbf{Description} \\
+        \midrule
+        Operating System & iOS 12+, Android 8.0+ via Flutter framework \\
+        Backend API & RESTful endpoints hosted at \texttt{http://38.242.246.126:3000} (or localhost for development) \\
+        Local Database & SQLite for caching recipes and user preferences \\
+        Third-Party Libraries & \begin{itemize}[leftmargin=*, nosep]
+            \item \texttt{cached\_network\_image}: Image caching
+            \item \texttt{image\_picker}: Photo selection
+            \item \texttt{http}: API communication
+            \item \texttt{provider}: State management
+            \item \texttt{sqflite}: SQLite database
+            \item \texttt{intl}: Internationalization
+            \item \texttt{flutter\_cache\_manager}: Cache management
+        \end{itemize} \\
+        Development Tools & Flutter SDK, Dart, Android Studio, Xcode \\
+        \bottomrule
+    \end{tabularx}
+    \caption{Software Interfaces}
+\end{table}
+
+\subsection{Communication Interfaces}
+\begin{itemize}
+    \item \textbf{Protocol}: HTTP/HTTPS for all client-server communication.
+    \item \textbf{Data Format}: JSON for request/response payloads.
+    \item \textbf{Authentication}: JWT tokens sent in Authorization header.
+    \item \textbf{Error Handling}: Standard HTTP status codes with descriptive error messages.
+    \item \textbf{Rate Limiting}: Implemented on server-side to prevent abuse.
+\end{itemize}
+
+\newpage
+
+\section{Other Non-Functional Requirements}
+\label{sec:other-requirements}
+
+\subsection{Performance Requirements}
+\begin{table}[H]
+    \centering
+    \begin{tabularx}{\textwidth}{lYc}
+        \toprule
+        \textbf{Metric} & \textbf{Requirement} & \textbf{Target} \\
+        \midrule
+        App Startup Time & Time from launch to home screen display & < 3 seconds \\
+        Recipe List Loading & Time to load and display recipe list & ≤ 2 seconds \\
+        Image Loading & Time to load cached images & < 1 second \\
+        API Response Time & Server response time for API calls & < 500 ms \\
+        Database Operations & Local SQLite read/write operations & < 100 ms \\
+        Search Response & Time to filter/search recipes & < 1 second \\
+        \bottomrule
+    \end{tabularx}
+    \caption{Performance Requirements}
+\end{table}
+
+\subsection{Security Requirements}
+\begin{itemize}
+    \item \textbf{Authentication}:
+    \begin{itemize}
+        \item Password hashing using bcrypt algorithm
+        \item JWT token-based authentication with 24-hour expiration
+        \item Secure token storage using Flutter Secure Storage
+    \end{itemize}
+    
+    \item \textbf{Authorization}:
+    \begin{itemize}
+        \item Role-based access control (User, Admin)
+        \item Recipe ownership validation for edit/delete operations
+        \item Server-side authorization checks for all protected endpoints
+    \end{itemize}
+    
+    \item \textbf{Data Protection}:
+    \begin{itemize}
+        \item HTTPS for all network communications
+        \item Input validation and sanitization
+        \item SQL injection prevention via parameterized queries
+        \item File upload validation (type, size, virus scanning)
+    \end{itemize}
+    
+    \item \textbf{Privacy}:
+    \begin{itemize}
+        \item GDPR compliance for EU users
+        \item Clear privacy policy and data usage terms
+        \item User data encryption at rest
+    \end{itemize}
+\end{itemize}
+
+\subsection{Software Quality Attributes}
+\begin{itemize}
+    \item \textbf{Maintainability}:
+    \begin{itemize}
+        \item Clean architecture with separation of concerns
+        \item Comprehensive code documentation
+        \item Modular design with reusable components
+        \item Consistent coding standards (Dart style guide)
+    \end{itemize}
+    
+    \item \textbf{Testability}:
+    \begin{itemize}
+        \item Unit tests for models and services
+        \item Integration tests for UI components
+        \item Mock server for API testing
+        \item Test coverage target: 80\%+
+    \end{itemize}
+    
+    \item \textbf{Portability}:
+    \begin{itemize}
+        \item Single codebase for iOS and Android
+        \item Responsive design for various screen sizes
+        \item Platform-specific adaptations where necessary
+    \end{itemize}
+    
+    \item \textbf{Reliability}:
+    \begin{itemize}
+        \item Graceful error handling and recovery
+        \item Offline capability with data synchronization
+        \item Automatic retry for failed network requests
+        \item Comprehensive logging and monitoring
+    \end{itemize}
+    
+    \item \textbf{Usability}:
+    \begin{itemize}
+        \item Intuitive navigation and workflow
+        \item Consistent UI patterns and components
+        \item Accessibility features (font scaling, contrast)
+        \item Clear error messages and user guidance
+    \end{itemize}
+\end{itemize}
+
+\newpage
+
+\section{Appendices}
+\label{sec:appendices}
+
+\subsection{Appendix A: Glossary}
+\begin{table}[H]
+    \centering
+    \begin{tabularx}{\textwidth}{lY}
+        \toprule
+        \textbf{Term} & \textbf{Definition} \\
+        \midrule
+        Recipe Model & Data structure containing recipe details (name, ingredients, steps, cooking time, calories, etc.) \\
+        Provider & State management class in Flutter that notifies listeners of changes (e.g., RecipeProvider, UserProvider) \\
+        IngredientSelector & Custom widget for selecting ingredients from a searchable list with add-new capability \\
+        CachedProfileImage & Widget for displaying cached network images or local assets with fallback UI \\
+        ApiService & Service class containing all API communication methods \\
+        DatabaseService & Service class for local SQLite database operations \\
+        ChangeNotifier & Flutter class that provides change notification to widgets \\
+        MultiProvider & Widget that provides multiple providers to the widget tree \\
+        \bottomrule
+    \end{tabularx}
+    \caption{Technical Glossary}
+\end{table}
+
+\subsection{Appendix B: Key Source Code Structure}
+\begin{lstlisting}[language=Dart, caption=Main Application Structure, label=lst:app-structure]
+lib/
+├── main.dart                    # Application entry point
+├── constants.dart               # App constants and styles
+├── Models/
+│   ├── recipe_model.dart        # Recipe data model
+│   └── user_model.dart          # User data model
+├── Providers/
+│   ├── recipe_provider.dart     # Recipe state management
+│   └── user_provider.dart       # User state management
+├── Screens/
+│   ├── splash_screen.dart       # Splash screen
+│   ├── login_screen.dart        # Login screen
+│   ├── register_screen.dart     # Registration screen
+│   ├── home_screen.dart         # Home screen
+│   ├── profile_screen.dart      # Profile screen
+│   ├── recipe_screen.dart       # Recipe list screen
+│   ├── recipe_detail_screen.dart# Recipe details
+│   ├── recipe_upload_screen.dart# Recipe upload
+│   ├── recipe_edit_screen.dart  # Recipe editing
+│   └── favorite_screen.dart     # Favorites screen
+├── Services/
+│   ├── api_service.dart         # API communication
+│   └── database_service.dart    # Local database
+└── Widgets/
+    ├── cached_image.dart        # Cached image widget
+    └── ingredient_selector.dart # Ingredient selector
+\end{lstlisting}
+
+\subsection{Appendix C: Database Schema}
+\begin{table}[H]
+    \centering
+    \begin{tabularx}{\textwidth}{lY}
+        \toprule
+        \textbf{Table} & \textbf{Description} \\
+        \midrule
+        Users & \texttt{id, username, email, password\_hash, profile\_image\_path, is\_admin, created\_at} \\
+        Recipes & \texttt{id, name, category, cooking\_time, calories, image\_path, ingredients, steps, emotions, user\_id, created\_at} \\
+        Ingredients & \texttt{id, name, created\_at} \\
+        Favorites & \texttt{user\_id, recipe\_id, created\_at} \\
+        Recipe\_Ingredients & \texttt{recipe\_id, ingredient\_id} \\
+        \bottomrule
+    \end{tabularx}
+    \caption{Database Schema Overview}
+\end{table}
+
+\subsection{Appendix D: API Endpoints Summary}
+\begin{table}[H]
+    \centering
+    \begin{tabularx}{\textwidth}{lYc}
+        \toprule
+        \textbf{Endpoint} & \textbf{Description} & \textbf{Method} \\
+        \midrule
+        /api/auth/register & User registration & POST \\
+        /api/auth/login & User login & POST \\
+        /api/recipes & Get all recipes / Upload recipe & GET, POST \\
+        /api/recipes/:id & Get/Update/Delete specific recipe & GET, PUT, DELETE \\
+        /api/ingredients & Get all ingredients / Add new & GET, POST \\
+        /api/users/favorites & Manage favorite recipes & GET, POST, DELETE \\
+        /api/users/profile-picture & Update profile picture & PUT \\
+        /api/users/username & Update username & PUT \\
+        /api/users/\{id\}/recipes & Get user's recipes & GET \\
+        \bottomrule
+    \end{tabularx}
+    \caption{Key API Endpoints}
+\end{table}
+
+\subsection{Appendix E: Dependencies}
+\begin{lstlisting}[language=yaml, caption=pubspec.yaml Dependencies, label=lst:dependencies]
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  sqflite: ^2.4.2
+  path: ^1.9.1
+  dropdown_search: ^5.0.2
+  provider: ^6.0.5
+  image_picker: ^1.0.4
+  http: ^1.1.0
+  intl: ^0.18.1
+  flutter_cache_manager: ^3.3.0
+  cached_network_image: ^3.3.0
+  path_provider: ^2.1.0
+  shared_preferences: ^2.2.2
+\end{lstlisting}
+
+\subsection{Appendix F: Testing Requirements}
+\begin{itemize}
+    \item \textbf{Unit Testing}:
+    \begin{itemize}
+        \item Test all model classes (Recipe, User)
+        \item Test API service methods
+        \item Test provider state changes
+        \item Test utility functions and helpers
+    \end{itemize}
+    
+    \item \textbf{Integration Testing}:
+    \begin{itemize}
+        \item Test complete user flows (registration → login → home)
+        \item Test recipe upload and editing workflows
+        \item Test favorite management
+        \item Test error scenarios and recovery
+    \end{itemize}
+    
+    \item \textbf{UI Testing}:
+    \begin{itemize}
+        \item Test widget rendering and interactions
+        \item Test navigation flows
+        \item Test responsive design on different screen sizes
+        \item Test accessibility features
+    \end{itemize}
+    
+    \item \textbf{Performance Testing}:
+    \begin{itemize}
+        \item Measure app startup time
+        \item Test scroll performance with large recipe lists
+        \item Test memory usage and leak detection
+        \item Test battery consumption
+    \end{itemize}
+    
+    \item \textbf{Security Testing}:
+    \begin{itemize}
+        \item Penetration testing of API endpoints
+        \item Data validation and sanitization tests
+        \item Authentication and authorization tests
+        \item Secure storage validation
+    \end{itemize}
+\end{itemize}
+
+\vspace{2cm}
+
+\begin{center}
+    \rule{\textwidth}{1pt}
+    
+    \vspace{0.5cm}
+    \textbf{Document Change History}
+    
+    \vspace{0.3cm}
+    \begin{tabular}{|c|c|c|c|}
+        \hline
+        \textbf{Version} & \textbf{Date} & \textbf{Author} & \textbf{Changes} \\
+        \hline
+        1.0 & Oct 2024 & Development Team & Initial Release \\
+        \hline
+    \end{tabular}
+\end{center}
 
 \end{document}
