@@ -44,6 +44,7 @@ class _HomeScreenState extends State<HomeScreen> {
     'Healthy',
     'Quick',
     'Light',
+    'None',
   ];
   List<String> timeOptions = ['<= 15mins', '<= 30mins', '<= 1hour', '<= 1hour 30mins', '2+ hours'];
   List<Map<String, dynamic>> allIngredients = [];
@@ -637,7 +638,10 @@ class _HomeScreenState extends State<HomeScreen> {
             }).toList(),
             onChanged: (value) {
               setState(() {
-                selectedEmotion = value;
+                if (value == 'None') {
+                  selectedEmotion = null;
+                } else {
+                selectedEmotion = value;}
               });
             },
           ),
