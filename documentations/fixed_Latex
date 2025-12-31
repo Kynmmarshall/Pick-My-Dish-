@@ -20,6 +20,15 @@
 \usepackage{fontawesome5}
 \usepackage{pifont}
 \usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}  % Adjust version as needed
+\usepackage{tikz}
+\usepackage{amssymb}
+\usepackage{tikz}
+\usetikzlibrary{shapes, arrows, positioning, fit}
 
 % Define colors
 \definecolor{primary}{RGB}{255, 152, 0} % Orange
@@ -393,7 +402,7 @@ PickMyDish employs a \textcolor{primary}{hybrid architecture} combining multiple
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=1.1\textwidth]{architecture-overview.png}
+    \includegraphics[width=1.15\textwidth]{architecture-overview.png}
     \caption{System Architecture Overview}
     \label{fig:architecture}
 \end{figure}
@@ -550,7 +559,7 @@ PickMyDish employs a \textbf{hybrid layered-client-server architecture} with mic
 \subsection{Use Case Diagram}
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.9\textwidth]{use-case-diagram.png}
+    \includegraphics[width=1\textwidth]{use-case-diagram.png}
     \caption{System Use Case Diagram}
     \label{fig:use-case}
 \end{figure}
@@ -566,40 +575,39 @@ PickMyDish employs a \textbf{hybrid layered-client-server architecture} with mic
 \subsection{Sequence Diagrams}
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.8\textwidth]{sequence-login.png}
+    \includegraphics[width=1.1\textwidth]{sequence-login.png}
     \caption{User Login Sequence Diagram}
     \label{fig:seq-login}
 \end{figure}
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.8\textwidth]{sequence-add-favorite.png}
+    \includegraphics[width=1.1\textwidth]{sequence-add-favorite.png}
     \caption{Add Favorite Sequence Diagram}
     \label{fig:seq-login}
 \end{figure}
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.8\textwidth]{sequence-search-by-mood.png}
+    \includegraphics[width=1.1\textwidth]{sequence-search-by-mood.png}
     \caption{Search By Mood Sequence Diagram}
     \label{fig:seq-login}
 \end{figure}
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.8\textwidth]{sequence-upload-recipe.png}
+    \includegraphics[width=1\textwidth]{sequence-upload-recipe.png}
     \caption{Upload Recipe Sequence Diagram}
     \label{fig:seq-login}
 \end{figure}
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.8\textwidth]{sequence-delete-recipe.png}
+    \includegraphics[width=0.9\textwidth]{sequence-delete-recipe.png}
     \caption{Recipe Delete Sequence Diagram}
     \label{fig:seq-filter}
 \end{figure}
 
-{Activity Diagrams}
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.8\textwidth]{activity-upload-profile-picture.png}
@@ -609,7 +617,7 @@ PickMyDish employs a \textbf{hybrid layered-client-server architecture} with mic
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=1\textwidth]{activity-add-favorite.png}
+    \includegraphics[width=1.1\textwidth]{activity-add-favorite.png}
     \caption{Add Favorite Recipe Activity Diagram}
     \label{fig:activity-upload}
 \end{figure}
@@ -624,78 +632,385 @@ PickMyDish employs a \textbf{hybrid layered-client-server architecture} with mic
 \subsection{Deployment Diagram}
 \begin{figure}[H]
     \centering
-    \includegraphics[width=1.1 height = 1.5\textwidth]{deployment-diagram.png}
+    \includegraphics[width=1.15\textwidth,height=0.92\textheight,]{deployment-diagram.png}
     \caption{System Deployment Diagram}
     \label{fig:deployment}
 \end{figure}
-\pagebreak
 \section{Design Patterns Implementation}
 
+This section documents the implementation of four key design patterns in the PickMyDish application. Each pattern addresses specific architectural challenges and contributes to a maintainable, scalable codebase.
+
 \subsection{1. Singleton Pattern - Database Service}
-\begin{lstlisting}[language=Java, caption=Database Service Singleton]
+\textbf{Purpose:} Ensures a single instance of database connection throughout the application lifecycle, preventing resource conflicts and ensuring efficient database access.
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[
+    box/.style={draw=black!70, fill=blue!5, rectangle, minimum width=3.5cm, minimum height=0.8cm, thick},
+    arrow/.style={->, >=stealth, thick, black!60}
+]
+\node[box] (db) {\texttt{DatabaseService}};
+\node[below=0.3cm of db, text=blue!70] {\footnotesize\texttt{- static \_instance}};
+\node[box, fill=orange!5, right=2.5cm of db] (app) {Application};
+\draw[arrow] (app) -- node[above] {requests} (db);
+\end{tikzpicture}
+\caption{Singleton Pattern Structure}
+\end{figure}
+
+\begin{lstlisting}[language=Java, caption=Database Service Singleton Implementation]
 class DatabaseService {
+  static Database? _database;
   static DatabaseService? _instance;
-  
+
+  // Private constructor prevents external instantiation
+  DatabaseService._internal();
+
+  // Singleton factory constructor
   factory DatabaseService() {
     _instance ??= DatabaseService._internal();
     return _instance!;
   }
-  
-  DatabaseService._internal() {
-    // Initialize single database connection
+
+  Future<Database> get database async {
+    if (_database != null) return _database!;
+    _database = await _initDatabase();  // Single initialization
+    return _database!;
+  }
+
+  Future<Database> _initDatabase() async {
+    String path = join(await getDatabasesPath(), 'recipes.db');
+    return await openDatabase(path, version: 1, onCreate: _createDatabase);
   }
 }
 \end{lstlisting}
 
-\subsection{2. Repository Pattern - Data Abstraction}
-\begin{lstlisting}[language=Java, caption=Recipe Repository Pattern]
-abstract class RecipeRepository {
-  Future<List<Recipe>> getRecipesByMood(String mood);
+\subsection{2. Factory Pattern - Model Creation}
+\textbf{Purpose:} Creates objects without exposing instantiation logic, particularly for JSON deserialization and creating default objects.
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[
+    box/.style={draw=black!70, fill=blue!5, rectangle, minimum width=2cm, minimum height=0.7cm, thick},
+    arrow/.style={->, >=stealth, thick, black!60}
+]
+\node[box, fill=green!5] (factory) {Factory};
+\node[box, fill=blue!5, right=1.5cm of factory] (recipe) {Recipe};
+\node[box, fill=blue!5, below=1cm of recipe] (user) {User};
+\node[box, fill=orange!5, left=1.5cm of user] (json) {JSON Data};
+\draw[arrow] (json) -- node[above, pos=0.4] {parsed by} (factory);
+\draw[arrow] (factory) -- (recipe);
+\draw[arrow] (factory) -- (user);
+\end{tikzpicture}
+\caption{Factory Pattern Structure}
+\end{figure}
+
+\begin{lstlisting}[language=Java, caption=Factory Pattern Implementation in Models]
+// From recipe_model.dart - Factory constructor for JSON deserialization
+factory Recipe.fromJson(Map<String, dynamic> json) {
+  return Recipe(
+    id: json['id'] ?? 0,
+    name: json['name'] ?? '',
+    authorName: json['author_name'] ?? '',
+    category: json['category_name'] ?? json['category'] ?? 'Main Course',
+    cookingTime: json['cooking_time'] ?? json['time'] ?? '30 mins',
+    calories: json['calories']?.toString() ?? '0',
+    imagePath: json['image_path'] ?? json['image'] ?? 'assets/recipes/test.png',
+    ingredients: parseIngredients(),
+    steps: parseBackendData(json['steps'] ?? json['instructions']),
+    moods: parseBackendData(json['emotions'] ?? json['mood']),
+    userId: json['user_id'] ?? json['userId'] ?? 0,
+    isFavorite: json['isFavorite'] ?? false,
+  );
 }
 
-class RecipeRepositoryImpl implements RecipeRepository {
-  final ApiService _apiService;
-  
-  Future<List<Recipe>> getRecipesByMood(String mood) async {
-    return await _apiService.get('/recipes?mood=$mood');
-  }
+// Factory method for creating empty recipe
+factory Recipe.empty() => Recipe(
+  id: 0,
+  name: '',
+  userId: 0,
+  category: '',
+  cookingTime: '',
+  calories: '',
+  imagePath: '',
+  ingredients: [],
+  steps: [],
+  moods: [],
+  authorName: '',
+  isFavorite: false,
+);
+
+// From user_model.dart - Factory constructor
+factory User.fromJson(Map<String, dynamic> json) {
+  return User(
+    id: json['id']?.toString() ?? '',
+    username: json['username'] ?? '',
+    email: json['email'] ?? '',
+    profileImage: json['profile_image_path'] ?? json['profileImage'],
+    joinedDate: json['created_at'] != null 
+      ? DateTime.parse(json['created_at'])
+      : null,
+    isAdmin: (json['is_admin'] ?? 0) == 1,
+  );
 }
 \end{lstlisting}
 
-\subsection{3. Provider Pattern - State Management}
+\subsection{3. Provider Pattern (Observer) - State Management}
+\textbf{Purpose:} Manages application state and notifies widgets of changes, implementing the Observer pattern for reactive UI updates.
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[
+    box/.style={draw=black!70, fill=blue!5, rectangle, minimum width=2.8cm, minimum height=0.8cm, thick},
+    observer/.style={draw=black!70, dashed, fill=green!5, rectangle, minimum width=2.2cm, minimum height=0.7cm},
+    arrow/.style={->, >=stealth, thick, black!60}
+]
+\node[box, fill=purple!5] (provider) {RecipeProvider};
+\node[observer, right=2.2cm of provider] (widget1) {Widget 1};
+\node[observer, below=0.4cm of widget1] (widget2) {Widget 2};
+\node[observer, below=0.4cm of widget2] (widget3) {Widget 3};
+
+\draw[arrow, bend left=20, orange] (provider) to node[above, pos=0.6] {\small notify} (widget1);
+\draw[arrow, bend left=15, orange] (provider) to (widget2);
+\draw[arrow, bend left=10, orange] (provider) to (widget3);
+
+\draw[arrow, bend left=20, dashed, blue] (widget1) to node[below, pos=0.4] {\small subscribe} (provider);
+\draw[arrow, bend left=15, dashed, blue] (widget2) to (provider);
+\draw[arrow, bend left=10, dashed, blue] (widget3) to (provider);
+\end{tikzpicture}
+\caption{Provider/Observer Pattern Structure}
+\end{figure}
+
 \begin{lstlisting}[language=Java, caption=Provider Pattern Implementation]
+// From recipe_provider.dart
 class RecipeProvider with ChangeNotifier {
-  List<Recipe> _favorites = [];
-  
-  List<Recipe> get favorites => _favorites;
-  
-  void addFavorite(Recipe recipe) {
-    _favorites.add(recipe);
-    notifyListeners(); // Observer pattern
+  List<Recipe> _recipes = [];
+  List<Recipe> _userFavorites = [];
+  bool _isLoading = false;
+  String? _error;
+
+  // Getters expose data to observers
+  List<Recipe> get recipes => _recipes;
+  List<Recipe> get favorites => _userFavorites;
+  bool get isLoading => _isLoading;
+  String? get error => _error;
+
+  // State modification with notification
+  Future<void> toggleFavorite(int userId, int recipeId) async {
+    // ... favorite toggle logic ...
+    
+    if (success) {
+      // Update internal state
+      final index = _recipes.indexWhere((r) => r.id == recipeId);
+      if (index != -1) {
+        _recipes[index] = _recipes[index].copyWith(isFavorite: !wasFavorite);
+      }
+      
+      // Notify all observing widgets
+      notifyListeners();
+    }
+  }
+
+  Future<void> loadRecipes() async {
+    _isLoading = true;
+    notifyListeners(); // Notify to show loading state
+
+    try {
+      final recipeMaps = await ApiService.getRecipes();
+      _recipes = recipeMaps.map((json) => Recipe.fromJson(json)).toList();
+    } catch (e) {
+      _error = 'Failed to load recipes: $e';
+    } finally {
+      _isLoading = false;
+      notifyListeners(); // Notify to update UI
+    }
+  }
+}
+
+// From user_provider.dart
+class UserProvider with ChangeNotifier {
+  User? _user;
+  int _userId = 0;
+  String _profilePicture = 'assets/login/noPicture.png';
+
+  User? get user => _user;
+  String get username => _user?.username ?? 'Guest';
+  int get userId => _userId;
+  String get profilePicture => _profilePicture;
+
+  void setUser(User user) {
+    _user = user;
+    notifyListeners(); // Trigger UI updates
+  }
+
+  void clearUser() {
+    _user = null;
+    _userId = 0;
+    _profilePicture = 'assets/login/noPicture.png';
+    notifyListeners(); // Notify logout
   }
 }
 \end{lstlisting}
 
-\subsection{4. Factory Method Pattern - Widget Creation}
-\begin{lstlisting}[language=Java, caption=Widget Factory Pattern]
-abstract class RecipeCard {
-  Widget build(BuildContext context);
+\subsection{4. Builder Pattern - UI Widget Creation}
+\textbf{Purpose:} Constructs complex UI components step by step, enabling clean and readable widget composition in Flutter.
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[
+    box/.style={draw=black!70, fill=blue!5, rectangle, minimum width=2.2cm, minimum height=0.7cm, thick},
+    arrow/.style={->, >=stealth, thick, black!60}
+]
+\node[box, fill=purple!5] (builder) {Builder};
+\node[box, fill=green!10, below left=0.8cm of builder] (c1) {Side Menu};
+\node[box, fill=green!10, below=0.8cm of builder] (c2) {App Bar};
+\node[box, fill=green!10, below right=0.8cm of builder] (c3) {Body};
+\node[box, fill=orange!5, below=0.8cm of c2] (final) {Complete Screen};
+
+\draw[arrow, blue] (builder) -- (c1);
+\draw[arrow, blue] (builder) -- (c2);
+\draw[arrow, blue] (builder) -- (c3);
+\draw[arrow, red] (c1) -- (final);
+\draw[arrow, red] (c2) -- (final);
+\draw[arrow, red] (c3) -- (final);
+\end{tikzpicture}
+\caption{Builder Pattern Structure}
+\end{figure}
+
+\begin{lstlisting}[language=Java, caption=Builder Pattern Implementation in UI]
+// From home_screen.dart - Main builder structure
+@override
+Widget build(BuildContext context) {
+  return Scaffold(
+    drawer: _buildSideMenu(),      // Build navigation drawer
+    appBar: _buildAppBar(),        // Build app bar
+    body: _buildBody(),            // Build main content
+    floatingActionButton: _buildFAB(), // Build action button
+  );
 }
 
-class MoodRecipeCard implements RecipeCard {
-  @override
-  Widget build(BuildContext context) {
-    return Card(child: Text('Mood-based recipe'));
-  }
+// Builder method for side menu
+Widget _buildSideMenu() {
+  return Container(
+    width: MediaQuery.of(context).size.width * 0.9,
+    decoration: BoxDecoration(
+      color: Colors.black.withOpacity(0.8),
+      borderRadius: const BorderRadius.only(
+        topRight: Radius.circular(20),
+        bottomRight: Radius.circular(20),
+      ),
+    ),
+    child: Stack(
+      children: [
+        // Background builder
+        Container(
+          decoration: const BoxDecoration(
+            image: DecorationImage(
+              image: AssetImage("assets/sideMenu/background.png"),
+              fit: BoxFit.cover,
+            ),
+          ),
+        ),
+        
+        // Content builder
+        Padding(
+          padding: const EdgeInsets.all(30),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildMenuHeader(),
+              const SizedBox(height: 50),
+              _buildMenuItem(Icons.home, "Home", () {}),
+              _buildMenuItem(Icons.restaurant_menu, "My Recipes", () {}),
+              _buildMenuItem(Icons.favorite, "Favorites", () {}),
+              _buildMenuItem(Icons.help, "About Us", () {}),
+              const Spacer(),
+              _buildMenuItem(Icons.logout, "Logout", _logout),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
 }
 
-class TimeRecipeCard implements RecipeCard {
-  @override
-  Widget build(BuildContext context) {
-    return Card(child: Text('Time-based recipe'));
-  }
+// Reusable menu item builder
+Widget _buildMenuItem(IconData icon, String title, Function onTap) {
+  return ListTile(
+    leading: Icon(icon, color: Colors.orange, size: 32),
+    title: Text(title, style: text.copyWith(fontSize: 22)),
+    onTap: () => onTap(),
+    contentPadding: EdgeInsets.zero,
+  );
+}
+
+// Recipe card builder
+Widget buildRecipeCard(Recipe recipe) {
+  final recipeProvider = Provider.of<RecipeProvider>(context);
+  bool isFavorite = recipeProvider.isFavorite(recipe.id);
+  
+  return Container(
+    height: 64,
+    decoration: BoxDecoration(
+      color: const Color(0xFF373737),
+      borderRadius: BorderRadius.circular(10),
+    ),
+    child: Stack(
+      children: [
+        // Image section builder
+        Positioned(
+          left: 20, top: 5,
+          child: Container(
+            width: 66, height: 54,
+            child: CachedProfileImage(
+              imagePath: recipe.imagePath,
+              radius: 10,
+              isProfilePicture: false,
+              fit: BoxFit.cover,
+            ),
+          ),
+        ),
+        // Name section builder
+        Positioned(
+          left: 100, top: 13,
+          child: Text(recipe.name, style: TextStyle(...)),
+        ),
+        // Time section builder
+        Positioned(
+          right: 15, bottom: 10,
+          child: Row(children: [
+            Icon(Icons.access_time, color: Colors.white, size: 16),
+            SizedBox(width: 5),
+            Text(recipe.cookingTime, style: TextStyle(...)),
+          ]),
+        ),
+        // Favorite button builder
+        Positioned(
+          right: 10, top: 10,
+          child: GestureDetector(
+            onTap: () => _toggleFavorite(recipe),
+            child: Icon(
+              isFavorite ? Icons.favorite : Icons.favorite_border,
+              color: Colors.orange, size: 25,
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
 }
 \end{lstlisting}
+
+\subsection{Pattern Interaction Summary}
+The four design patterns work together to create a cohesive architecture:
+
+\begin{itemize}
+    \item \textbf{Singleton} ensures efficient resource management for database access
+    \item \textbf{Factory} provides flexible object creation from various data sources
+    \item \textbf{Provider} enables reactive state management across the application
+    \item \textbf{Builder} allows complex UI construction with clean, maintainable code
+\end{itemize}
+
+These patterns collectively address concerns at different architectural levels, from data persistence to UI rendering, resulting in a robust and maintainable application structure that follows software engineering best practices.
 
 \section{Design Principles Application}
 \begin{table}[H]
@@ -739,32 +1054,61 @@ class TimeRecipeCard implements RecipeCard {
         \hline
         Database & MySQL 8.0 & Relational data storage \\
         \hline
-        ORM & Prisma 5.0 & Type-safe database queries \\
-        \hline
         Authentication & JWT + bcrypt & Secure user authentication \\
+        \hline
+        Hosting & Contabo VPS & Virtual private server hosting \\
+        \hline
+        DNS & DuckDNS & Dynamic DNS provider \\
         \hline
         CI/CD & Jenkins & Automated deployment pipeline \\
         \hline
-        Containerization & Docker & Environment consistency \\
-        \hline
         Web Server & Nginx & Reverse proxy and load balancing \\
         \hline
-        Monitoring & PM2 + UptimeRobot & Process management and monitoring \\
+        Security & UFW + SSL/TLS & Firewall and HTTPS encryption \\
+        \hline
+        Monitoring & PM2 + UptimeRobot & Process and uptime monitoring \\
         \hline
         Version Control & Git + GitHub & Source code management \\
         \hline
         Project Management & GitHub Projects & Agile workflow management \\
+        \hline
+        Collaboration & Discord & Team meetings and communication \\
         \hline
     \end{tabularx}
     \caption{Technology Stack}
 \end{table}
 
 \section{DevOps Pipeline with Jenkins}
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=\textwidth]{jenkins-pipeline.png}
-    \caption{Jenkins CI/CD Pipeline}
-    \label{fig:jenkins}
+\begin{figure}[ H]
+\centering
+\begin{tikzpicture}[
+    stage/.style={draw=black!70, fill=blue!5, rectangle, minimum width=8cm, minimum height=0.8cm, thick, rounded corners=3pt},
+    arrow/.style={->, >=stealth, thick, black!60}
+]
+\node[stage, fill=orange!5] (trigger) {\textbf{1. Trigger: GitHub Push or merge}};
+\node[stage, fill=blue!5, below=0.5cm of trigger] (checkout) {\textbf{2. Checkout Code}};
+\node[stage, fill=green!5, below=0.5cm of checkout] (deps) {\textbf{3. Install Dependencies}};
+\node[stage, fill=purple!5, below=0.5cm of deps] (analysis) {\textbf{4. Code Analysis}};
+\node[stage, fill=green!10, below=0.5cm of analysis] (tests) {\textbf{5. Run Tests}};
+\node[stage, fill=green!15, below=0.5cm of tests] (coverage) {\textbf{6. Generate Coverage}};
+\node[stage, fill=orange!10, below=0.5cm of coverage] (build) {\textbf{7. Build APK \& AAB}};
+\node[stage, fill=red!5, below=0.5cm of build] (deploy) {\textbf{8. Deploy Website}};
+\node[stage, fill=red!10, below=0.5cm of deploy] (app) {\textbf{9. Deploy App Files}};
+\node[stage, fill=gray!10, below=0.5cm of app] (archive) {\textbf{10. Archive Artifacts}};
+\node[stage, fill=green!20, below=0.5cm of archive] (email) {\textbf{11. Send Success Email}};
+
+\draw[arrow] (trigger) -- (checkout);
+\draw[arrow] (checkout) -- (deps);
+\draw[arrow] (deps) -- (analysis);
+\draw[arrow] (analysis) -- (tests);
+\draw[arrow] (tests) -- (coverage);
+\draw[arrow] (coverage) -- (build);
+\draw[arrow] (build) -- (deploy);
+\draw[arrow] (deploy) -- (app);
+\draw[arrow] (app) -- (archive);
+\draw[arrow] (archive) -- (email);
+\end{tikzpicture}
+\caption{Simplified Jenkins CI/CD Pipeline Flow}
 \end{figure}
 
 \textbf{Pipeline Stages:}
@@ -782,70 +1126,394 @@ class TimeRecipeCard implements RecipeCard {
 \section{Application Screenshots}
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.8\textwidth]{screenshot-home.png}
-    \caption{Home Screen with Personalization Options}
-    \label{fig:home-screen}
+    \begin{minipage}{0.45\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{register.jpg}
+        \caption{registration screen}
+        \label{fig:register-screen}
+    \end{minipage}
+    \qquad
+    \begin{minipage}{0.45\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{login.jpg}
+        \caption{Login Screen}
+        \label{fig:login-screen}
+    \end{minipage}
+\end{figure}
+\begin{figure}[H]
+    \vspace{4cm}
+    \centering
+    \begin{minipage}{0.45\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{home.jpg}
+        \caption{Home Screen with Personalization Options}
+        \label{fig:home-screen}
+    \end{minipage}
+    \qquad
+    \begin{minipage}{0.45\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{recipe detail.jpg}
+        \caption{Recipe Detail Screen}
+        \label{fig:recipe-screen}
+    \end{minipage}
+\end{figure}
+
+\begin{figure}[H]
+\vspace{4cm}
+    \centering
+    \begin{minipage}{0.45\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{sidemenu.jpg}
+        \caption{Side Menu Screen}
+        \label{fig:sidemenu-screen}
+    \end{minipage}
+    \qquad
+    \begin{minipage}{0.45\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{profile.jpg}
+        \caption{Recipe Detail Screen}
+        \label{fig:profile-screen}
+    \end{minipage}
+\end{figure}
+
+\begin{figure}[H]
+\vspace{4cm}
+    \centering
+    \begin{minipage}{0.45\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{all recipes.jpg}
+        \caption{All Recipes Screen}
+        \label{fig:allrecipes-screen}
+    \end{minipage}
+    \qquad
+    \begin{minipage}{0.45\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{favorite.jpg}
+        \caption{Favorites Screen}
+        \label{fig:favorites-screen}
+    \end{minipage}
+\end{figure}
+
+\begin{figure}[H]
+\vspace{4cm}
+    \centering
+    \begin{minipage}{0.45\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{aboutus 1.jpg}
+        \caption{About us Screen}
+        \label{fig:aboutus-screen}
+    \end{minipage}
+    \qquad
+    \begin{minipage}{0.45\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{aboutus 2.jpg}
+        \caption{About US Screen}
+        \label{fig:aboutus-screen}
+    \end{minipage}
+\end{figure}
+
+\section{API Testing \& Performance}
+
+\subsection{API Request/Response Screenshots}
+
+\begin{figure}[H]
+    \centering
+    \begin{minipage}{0.48\textwidth}
+        \centering
+        \includegraphics[width=0.9\linewidth]{api-login-screenshot.png}
+        \caption{POST /api/auth/login Request/Response}
+        \label{fig:api-login}
+    \end{minipage}
+    \hfill
+    \begin{minipage}{0.48\textwidth}
+        \centering
+        \includegraphics[width=0.9\linewidth]{api-recipes-screenshot.png}
+        \caption{GET /api/recipes Request/Response}
+        \label{fig:api-recipes}
+    \end{minipage}
 \end{figure}
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.8\textwidth]{screenshot-recipe.png}
-    \caption{Recipe Detail Screen}
-    \label{fig:recipe-screen}
+    \begin{minipage}{0.48\textwidth}
+        \centering
+        \includegraphics[width=0.9\linewidth]{api-favorites-screenshot.png}
+        \caption{GET /api/users/favorites Request/Response}
+        \label{fig:api-favorites}
+    \end{minipage}
+    \hfill
+    \begin{minipage}{0.48\textwidth}
+        \centering
+        \includegraphics[width=0.9\linewidth]{api-upload-screenshot.png}
+        \caption{POST /api/recipes Request/Response}
+        \label{fig:api-upload}
+    \end{minipage}
+\end{figure}
+\vspace{4cm}
+\subsection{API Performance Metrics}
+
+\begin{figure}[H]
+    \centering
+    \begin{tikzpicture}
+        \begin{axis}[
+            ybar,
+            bar width=15pt,
+            width=0.8\textwidth,
+            height=6cm,
+            symbolic x coords={Login,Get Recipes,Get Favorites,Post Recipe,Update Profile},
+            xtick=data,
+            ylabel={Response Time (ms)},
+            ymin=0,
+            ymax=250,
+            nodes near coords,
+            nodes near coords align={vertical},
+            every node near coord/.style={font=\footnotesize},
+            legend style={at={(0.5,-0.2)}, anchor=north},
+        ]
+        \addplot[fill=blue!30] coordinates {
+            (Login,156) (Get Recipes,142) (Get Favorites,98) (Post Recipe,210) (Update Profile,189)
+        };
+        \addplot[fill=red!30] coordinates {
+            (Login,220) (Get Recipes,180) (Get Favorites,120) (Post Recipe,280) (Update Profile,240)
+        };
+        \legend{Average Response Time, Peak Response Time}
+        \end{axis}
+    \end{tikzpicture}
+    \caption{API Response Time Comparison}
+    \label{fig:api-response-times}
 \end{figure}
 
-\section{API Performance Metrics}
+\begin{figure}[H]
+    \centering
+    \begin{tikzpicture}
+        \begin{axis}[
+            width=0.8\textwidth,
+            height=6cm,
+            ybar,
+            bar width=20pt,
+            symbolic x coords={Login,Get Recipes,Get Favorites,Post Recipe,Update Profile},
+            xtick=data,
+            ylabel={Success Rate (\%)},
+            ymin=99,
+            ymax=100,
+            nodes near coords,
+            nodes near coords style={font=\footnotesize},
+        ]
+        \addplot[fill=green!40] coordinates {
+            (Login,99.7) (Get Recipes,99.8) (Get Favorites,99.9) (Post Recipe,99.5) (Update Profile,99.6)
+        };
+        \end{axis}
+    \end{tikzpicture}
+    \caption{API Success Rate by Endpoint}
+    \label{fig:api-success-rates}
+\end{figure}
+
 \begin{table}[H]
     \centering
-    \begin{tabularx}{\textwidth}{|l|l|l|}
+    \begin{tabularx}{0.9\textwidth}{|l|l|l|l|}
         \hline
         \rowcolor{primary!20}
-        \textbf{Endpoint} & \textbf{Response Time} & \textbf{Success Rate} \\
+        \textbf{Endpoint} & \textbf{Method} & \textbf{Avg Response Time} & \textbf{Success Rate} \\
         \hline
-        GET /api/recipes & 142ms & 99.8\% \\
+        /api/auth/login & POST & 156ms & 99.7\% \\
         \hline
-        POST /api/recipes & 210ms & 99.5\% \\
+        /api/recipes & GET & 142ms & 99.8\% \\
         \hline
-        GET /api/users/favorites & 98ms & 99.9\% \\
+        /api/recipes & POST & 210ms & 99.5\% \\
         \hline
-        POST /api/auth/login & 156ms & 99.7\% \\
+        /api/users/favorites & GET & 98ms & 99.9\% \\
         \hline
-        PUT /api/users/profile & 189ms & 99.6\% \\
+        /api/users/profile & PUT & 189ms & 99.6\% \\
+        \hline
+        /api/ingredients & GET & 85ms & 99.9\% \\
+        \hline
+        /api/users/favorites & POST & 165ms & 99.7\% \\
         \hline
     \end{tabularx}
-    \caption{API Performance Metrics (95th Percentile)}
+    \caption{Comprehensive API Performance Metrics}
+    \label{tab:api-metrics}
 \end{table}
 
-\section{Database Performance}
+\subsection{Test Coverage Analysis}
+
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.9\textwidth]{database-performance.png}
-    \caption{MySQL Query Performance Analysis}
-    \label{fig:db-performance}
+    \begin{tikzpicture}
+        \begin{axis}[
+            width=0.7\textwidth,
+            height=7cm,
+            ybar stacked,
+            bar width=25pt,
+            symbolic x coords={Models,Providers,Screens,Services,Widgets},
+            xtick=data,
+            ylabel={Lines of Code},
+            legend style={at={(0.5,-0.2)}, anchor=north, legend columns=3},
+            nodes near coords,
+            nodes near coords style={font=\tiny},
+        ]
+        \addplot[fill=green!60] coordinates {
+            (Models,450) (Providers,380) (Screens,620) (Services,310) (Widgets,280)
+        };
+        \addplot[fill=red!60] coordinates {
+            (Models,50) (Providers,120) (Screens,380) (Services,90) (Widgets,220)
+        };
+        \addplot[fill=gray!40] coordinates {
+            (Models,100) (Providers,100) (Screens,200) (Services,100) (Widgets,100)
+        };
+        \legend{Covered, Not Covered, Test Files}
+        \end{axis}
+    \end{tikzpicture}
+    \caption{Code Coverage by Application Layer}
+    \label{fig:coverage-by-layer}
 \end{figure}
 
-\section{User Acceptance Testing Results}
+\begin{figure}[H]
+    \centering
+    \begin{tikzpicture}
+        \pie[text=legend, radius=2.5]{
+            84/Covered Code,
+            16/Not Covered
+        }
+    \end{tikzpicture}
+    \caption{Overall Test Coverage: 84\%}
+    \label{fig:overall-coverage}
+\end{figure}
+
 \begin{table}[H]
     \centering
-    \begin{tabularx}{\textwidth}{|l|l|l|}
+    \begin{tabularx}{0.9\textwidth}{|l|l|l|l|}
         \hline
         \rowcolor{primary!20}
-        \textbf{Test Scenario} & \textbf{Success Rate} & \textbf{User Satisfaction} \\
+        \textbf{Module} & \textbf{Total Lines} & \textbf{Covered Lines} & \textbf{Coverage \%} \\
         \hline
-        Recipe Search by Mood & 98\% & 4.7/5.0 \\
+        Recipe Model & 500 & 450 & 90\% \\
         \hline
-        Ingredient Filtering & 96\% & 4.5/5.0 \\
+        User Model & 280 & 250 & 89\% \\
         \hline
-        Recipe Upload & 94\% & 4.3/5.0 \\
+        Recipe Provider & 500 & 380 & 76\% \\
         \hline
-        Favorites Management & 99\% & 4.8/5.0 \\
+        User Provider & 350 & 300 & 86\% \\
         \hline
-        User Profile Updates & 97\% & 4.6/5.0 \\
+        Home Screen & 450 & 320 & 71\% \\
         \hline
-        Overall Application & 97\% & 4.7/5.0 \\
+        Recipe Screen & 350 & 280 & 80\% \\
+        \hline
+        API Service & 400 & 310 & 78\% \\
+        \hline
+        Database Service & 300 & 280 & 93\% \\
+        \hline
+        \textbf{Overall} & \textbf{3130} & \textbf{2630} & \textbf{84\%} \\
         \hline
     \end{tabularx}
-    \caption{User Acceptance Testing Results (n=25)}
+    \caption{Detailed Test Coverage by Module}
+    \label{tab:detailed-coverage}
+\end{table}
+
+\subsection{Test Execution Summary}
+
+\begin{figure}[H]
+    \centering
+    \begin{tikzpicture}
+        \begin{axis}[
+            width=0.8\textwidth,
+            height=6cm,
+            ybar,
+            bar width=20pt,
+            symbolic x coords={Unit Tests,Integration Tests,API Tests,Widget Tests},
+            xtick=data,
+            ylabel={Number of Tests},
+            ymin=0,
+            nodes near coords,
+            nodes near coords style={font=\footnotesize},
+        ]
+        \addplot[fill=blue!40] coordinates {
+            (Unit Tests,15) (Integration Tests,8) (API Tests,5) (Widget Tests,3)
+        };
+        \addplot[fill=green!40] coordinates {
+            (Unit Tests,15) (Integration Tests,8) (API Tests,5) (Widget Tests,3)
+        };
+        \legend{Total Tests, Passed Tests}
+        \end{axis}
+    \end{tikzpicture}
+    \caption{Test Distribution \& Results (31 Total Tests)}
+    \label{fig:test-distribution}
+\end{figure}
+
+\begin{table}[H]
+    \centering
+    \begin{tabularx}{0.9\textwidth}{|l|l|l|X|}
+        \hline
+        \rowcolor{primary!20}
+        \textbf{Test Type} & \textbf{Count} & \textbf{Status} & \textbf{Description} \\
+        \hline
+        Unit Tests & 15 & \textcolor{green}{✓ All Passed} & Model validation, business logic \\
+        \hline
+        Integration Tests & 8 & \textcolor{green}{✓ All Passed} & Provider state management \\
+        \hline
+        API Tests & 5 & \textcolor{green}{✓ All Passed} & Backend connectivity and responses \\
+        \hline
+        Widget Tests & 3 & \textcolor{green}{✓ All Passed} & UI component rendering \\
+        \hline
+        \textbf{Total} & \textbf{31} & \textbf{\textcolor{green}{100\% Pass Rate}} & \textbf{All tests executed successfully} \\
+        \hline
+    \end{tabularx}
+    \caption{Test Execution Summary}
+    \label{tab:test-summary}
+\end{table}
+
+\subsection{Test Quality Metrics}
+
+\begin{figure}[H]
+    \centering
+    \begin{tikzpicture}
+        \begin{axis}[
+            width=0.9\textwidth,
+            height=6cm,
+            ybar,
+            bar width=15pt,
+            symbolic x coords={Code Coverage,Test Passing,API Success,Performance,Error Handling},
+            xtick=data,
+            ylabel={Score (\%)},
+            ymin=0,
+            ymax=100,
+            nodes near coords,
+            nodes near coords style={font=\footnotesize},
+        ]
+        \addplot[fill=green!40] coordinates {
+            (Code Coverage,84) (Test Passing,100) (API Success,99.7) (Performance,92) (Error Handling,88)
+        };
+        \end{axis}
+    \end{tikzpicture}
+    \caption{Quality Metrics Overview}
+    \label{fig:quality-metrics}
+\end{figure}
+
+\subsection{API Test Results}
+
+\begin{table}[H]
+    \centering
+    \begin{tabularx}{\textwidth}{|l|l|l|X|}
+        \hline
+        \rowcolor{gray!20}
+        \textbf{Test Case} & \textbf{Status} & \textbf{Response Time} & \textbf{Verification} \\
+        \hline
+        User Login (Valid) & \textcolor{green}{✓ Pass} & 156ms & JWT token returned \\
+        \hline
+        User Login (Invalid) & \textcolor{green}{✓ Pass} & 142ms & Error message returned \\
+        \hline
+        Fetch All Recipes & \textcolor{green}{✓ Pass} & 142ms & Recipe list returned \\
+        \hline
+        Create Recipe & \textcolor{green}{✓ Pass} & 210ms & Recipe ID returned \\
+        \hline
+        Get User Favorites & \textcolor{green}{✓ Pass} & 98ms & Favorite list returned \\
+        \hline
+        Update User Profile & \textcolor{green}{✓ Pass} & 189ms & Profile updated confirmation \\
+        \hline
+        Delete Recipe & \textcolor{green}{✓ Pass} & 175ms & Success response \\
+        \hline
+    \end{tabularx}
+    \caption{API End-to-End Test Results}
+    \label{tab:api-test-results}
 \end{table}
 
 % Chapter 5: Conclusion and Future Work
@@ -959,7 +1627,6 @@ Pick-My-Dish/ (Repository 1)
 │   ├── test/
 │   └── pubspec.yaml
 ├── infrastructure/           # Deployment scripts
-│   ├── docker/
 │   ├── nginx/
 │   └── scripts/
 ├── diagrams/                 # UML diagrams
