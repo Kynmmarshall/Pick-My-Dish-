@@ -81,7 +81,7 @@ class _PickMyDishState extends State<PickMyDish> {
       ),
       home: _isInitializing ? const SplashScreen() : _initialScreen,
       
-      // 
+      
       routes: {
         '/home': (context) => const HomeScreen(),
         '/login': (context) => const LoginScreen(),
@@ -102,6 +102,7 @@ class _PickMyDishState extends State<PickMyDish> {
   }
 
 }
+
 
 
 
