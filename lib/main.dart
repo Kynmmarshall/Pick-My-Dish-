@@ -47,7 +47,7 @@ class _PickMyDishState extends State<PickMyDish> {
     
     await userProvider.initialize();
     
-    // Wait for splash screen to show
+    
     await Future.delayed(const Duration(milliseconds: 1500));
     
     if (mounted) {
@@ -102,6 +102,7 @@ class _PickMyDishState extends State<PickMyDish> {
   }
 
 }
+
 
 
 
