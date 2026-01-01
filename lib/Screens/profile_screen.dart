@@ -33,7 +33,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   void _loadProfilePicture() async {
     final userProvider = Provider.of<UserProvider>(context, listen: false);
-    String? imagePath = await ApiService.getProfilePicture(userProvider.userId);
+    String? imagePath = await ApiService.getProfilePicture();
     
     // Check mounted BEFORE updating UI
     if (mounted && imagePath != null && imagePath.isNotEmpty) {
@@ -50,7 +50,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   
   bool success = await ApiService.updateUsername(
     usernameController.text,
-    userProvider.userId  
   );
 
   
@@ -58,7 +57,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   if (!mounted) return;
   
   if (success) {
-    userProvider.updateUsername(usernameController.text, userProvider.userId);
+    userProvider.updateUsername(usernameController.text);
     setState(() {
       _isEditing = false;
     });
@@ -110,7 +109,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     
     bool success = await ApiService.uploadProfilePicture(
       File(pickedFile.path),
-      userProvider.userId
     );
     
     // Check mounted FIRST before using context
@@ -118,7 +116,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     
     if (success) {
       // Get actual filename
-      String? actualImagePath = await ApiService.getProfilePicture(userProvider.userId);
+      String? actualImagePath = await ApiService.getProfilePicture();
       
       // Check mounted again after async
       if (!mounted) return;

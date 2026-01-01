@@ -178,7 +178,6 @@ class _RecipeEditScreenState extends State<RecipeEditScreen> {
         widget.recipe.id,
         recipeData,
         _selectedImage,
-        userProvider.userId
       );
 
       debugPrint('📡 API Response: $success');

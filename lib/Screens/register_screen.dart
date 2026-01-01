@@ -356,11 +356,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
   );
 
   try {
-    bool success = await ApiService.register(userName, email, password);
-
+    var result = await ApiService.register(userName, email, password);
     Navigator.pop(context); // Hide loading
 
-    if (success) {
+    if (result != null && result['error'] == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Registration successful! Please login.', style: text),

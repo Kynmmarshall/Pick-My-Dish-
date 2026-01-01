@@ -130,7 +130,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                     size: 30,
                   ),
                   onPressed: () {
-                    recipeProvider.toggleFavorite(userProvider.userId, recipe.id);
+                    recipeProvider.toggleFavorite(recipe.id);
                     
                     setState(() {
                       recipe = recipe.copyWith(isFavorite: !recipe.isFavorite);
@@ -423,7 +423,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
     if (confirmed == true) {
       debugPrint('🚀 Calling deleteRecipe API...');
       final recipeProvider = Provider.of<RecipeProvider>(context, listen: false);
-      final success = await recipeProvider.deleteRecipe(recipe.id, userId);
+      final success = await recipeProvider.deleteRecipe(recipe.id);
       
       debugPrint('📡 API Response: $success');
 

@@ -229,7 +229,7 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       // Add delay to avoid build conflicts
       await Future.delayed(const Duration(milliseconds: 10));
-      await recipeProvider.loadUserFavorites(userProvider.userId);
+      await recipeProvider.loadUserFavorites();
     } catch (e) {
       debugPrint('Error loading favorites: $e');
     }
@@ -828,7 +828,7 @@ class _HomeScreenState extends State<HomeScreen> {
     // Load profile picture when menu opens
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final userProvider = Provider.of<UserProvider>(context, listen: false);
-    String? imagePath = await ApiService.getProfilePicture(userProvider.userId);
+    String? imagePath = await ApiService.getProfilePicture();
     
     // Check mounted BEFORE updating UI
     if (mounted && imagePath != null && imagePath.isNotEmpty) {

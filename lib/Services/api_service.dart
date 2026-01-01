@@ -2,6 +2,7 @@ import 'dart:convert';  // For JSON encoding/decoding
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 
 class ApiService {
@@ -12,7 +13,32 @@ class ApiService {
   
   // For production (VPS):
   static const String baseUrl = "http://38.242.246.126:3000";
+  static String? _token;
+
+  // Initialize token from shared preferences
+  static Future<void> init() async {
+    final prefs = await SharedPreferences.getInstance();
+    _token = prefs.getString('token');
+  }
   
+    static Future<void> ensureToken() async {
+    if (_token == null) await init();
+  }
+
+  // Save token to shared preferences
+  static Future<void> saveToken(String token) async {
+    _token = token;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('token', token);
+  }
+  
+  // Remove token (logout)
+  static Future<void> removeToken() async {
+    _token = null;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('token');
+  }
+
   // Test if backend is reachable and database is connected
   static Future<void> testConnection() async {
     try {
@@ -26,19 +52,37 @@ class ApiService {
   }
 
 
+   // Get headers with authentication
+  static Map<String, String> getHeaders({bool includeAuth = true}) {
+    final headers = {
+      'Content-Type': 'application/json',
+    };
+    
+    if (includeAuth && _token != null) {
+      headers['Authorization'] = 'Bearer $_token';
+    }
+    
+    return headers;
+  }
+
+
   //login user
   static Future<Map<String, dynamic>?>  login(String email, String password) async {
     try {
       final response = await http.post(
         Uri.parse('$baseUrl/api/auth/login'),
         body: json.encode({'email': email, 'password': password}),
-        headers: {'Content-Type': 'application/json'},
+        headers: getHeaders(includeAuth: false),
       );
       final errorData = json.decode(response.body);
       // ADD THIS DEBUG LINE:
       debugPrint('Login Response: ${response.body}');
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
+        // Save the token
+        if (data['token'] != null) {
+          await saveToken(data['token']);
+        }
         debugPrint('✅ Login successful: ${data['message']}');
         debugPrint('👤 User: ${data['user']}');
         return data;
@@ -53,7 +97,7 @@ class ApiService {
   }
 
 // Register a new user with name, email, and password
-static Future<bool> register(String userName, String email, String password) async {
+static Future<Map<String, dynamic>?> register(String userName, String email, String password) async {
     try {
       final response = await http.post(
         Uri.parse('$baseUrl/api/auth/register'),
@@ -65,29 +109,29 @@ static Future<bool> register(String userName, String email, String password) asy
         headers: {'Content-Type': 'application/json'},
       );
       
+      debugPrint('Register Response: ${response.body}');
+
       if (response.statusCode == 201) {
         final data = json.decode(response.body);
+
+        // Save the token
+        if (data['token'] != null) {
+          await saveToken(data['token']);
+        }
+
         debugPrint('✅ Registration successful: ${data['message']}');
-        return true;
+        return data;
       } else {
+        final errorData = json.decode(response.body);
         debugPrint('❌ Registration failed: ${response.statusCode} - ${response.body}');
-        return false;
+        return {'error': errorData['error'] ?? 'Registration failed'};
       }
     } catch (e) {
       debugPrint('❌ Registration error: $e');
-      return false;
+      return {'error': 'Registration error: $e'};
     }
   }
 
-static Future<void> testAuth() async {
-  debugPrint('🔐 Testing authentication...');
-  
-  // Test Registration
-  bool registered = await register('Test User', 'test@example.com', 'password123');
-  debugPrint(registered ? '✅ Registration successful' : '❌ Registration failed');
-  
-
-}
 
 // Add this test
 static Future<void> testBaseUrl() async {
@@ -100,17 +144,45 @@ static Future<void> testBaseUrl() async {
   }
 }
 
-//update user name
-static Future<bool> updateUsername(String newUsername, int userId) async {
+// Verify token
+static Future<Map<String, dynamic>?> verifyToken() async {
   try {
-     debugPrint('🔄 Updating username: $newUsername for user: $userId');
+    await init(); // Make sure token is loaded
+    
+    if (_token == null) {
+      return {'valid': false, 'error': 'No token found'};
+    }
+    
+    final response = await http.get(
+      Uri.parse('$baseUrl/api/auth/verify'),
+      headers: getHeaders(),
+    );
+    
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      return data;
+    } else {
+      // Token is invalid, remove it
+      await removeToken();
+      final errorData = json.decode(response.body);
+      return {'valid': false, 'error': errorData['error']};
+    }
+  } catch (e) {
+    debugPrint('❌ Token verification error: $e');
+    return {'valid': false, 'error': 'Verification failed'};
+  }
+}
+
+//update user name
+static Future<bool> updateUsername(String newUsername) async {
+  try {
+    await ensureToken(); // Ensure token is loaded
     final response = await http.put(
       Uri.parse('$baseUrl/api/users/username'),
       body: json.encode({
         'username': newUsername,
-        'userId': userId  // ← Send user ID
       }),
-      headers: {'Content-Type': 'application/json'},
+      headers: getHeaders(),
     );
 
     debugPrint('📡 Status: ${response.statusCode}');
@@ -123,8 +195,9 @@ static Future<bool> updateUsername(String newUsername, int userId) async {
 }
 
 //update profile picture
-static Future<bool> uploadProfilePicture(File imageFile, int userId) async {
+static Future<bool> uploadProfilePicture(File imageFile) async {
   try {
+    await ensureToken(); // Ensure token is loaded
     var request = http.MultipartRequest(
       'PUT', 
       Uri.parse('$baseUrl/api/users/profile-picture')
@@ -134,8 +207,8 @@ static Future<bool> uploadProfilePicture(File imageFile, int userId) async {
       await http.MultipartFile.fromPath('image', imageFile.path)
     );
     
-    // Add user ID to request
-    request.fields['userId'] = userId.toString();
+    // Add authorization header
+    request.headers['Authorization'] = 'Bearer $_token';
     
     var response = await request.send();
     return response.statusCode == 200;
@@ -145,10 +218,12 @@ static Future<bool> uploadProfilePicture(File imageFile, int userId) async {
 }
 
 //Get profile picture
-static Future<String?> getProfilePicture(int userId) async {
+static Future<String?> getProfilePicture() async {
   try {
+    await ensureToken(); // Ensure token is loaded
     final response = await http.get(
-      Uri.parse('$baseUrl/api/users/profile-picture?userId=$userId')
+      Uri.parse('$baseUrl/api/users/profile-picture'),
+      headers: getHeaders(),
     );
     
     if (response.statusCode == 200) {
@@ -167,9 +242,10 @@ static Future<String?> getProfilePicture(int userId) async {
 // Get all recipes
 static Future<List<Map<String, dynamic>>> getRecipes() async {
   try {
+    await ensureToken(); // Ensure token is loaded
     final response = await http.get(
       Uri.parse('$baseUrl/api/recipes'),
-      headers: {'Content-Type': 'application/json'},
+      headers: getHeaders(),
     );
     
     debugPrint('📡 Recipes endpoint: ${response.statusCode}'); 
@@ -177,7 +253,11 @@ static Future<List<Map<String, dynamic>>> getRecipes() async {
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
       return List<Map<String, dynamic>>.from(data['recipes'] ?? []);
-    } else {
+    } else if (response.statusCode == 401) {
+        // Token expired or invalid
+        debugPrint('❌ Authentication required');
+        return [];
+      }else {
       print('❌ Failed to fetch recipes: ${response.statusCode}');
       return [];
     }
@@ -190,8 +270,13 @@ static Future<List<Map<String, dynamic>>> getRecipes() async {
 // Upload recipe with image
 static Future<bool> uploadRecipe(Map<String, dynamic> recipeData, File? imageFile) async {
     try {
+      await init();
+      await ensureToken(); // Ensure token is loaded
       var request = http.MultipartRequest('POST', Uri.parse('$baseUrl/api/recipes'));
       
+      // Add authorization header
+      request.headers['Authorization'] = 'Bearer $_token';
+
       // Add recipe data
       request.fields['name'] = recipeData['name'];
       request.fields['category'] = recipeData['category'];
@@ -199,8 +284,7 @@ static Future<bool> uploadRecipe(Map<String, dynamic> recipeData, File? imageFil
       request.fields['calories'] = recipeData['calories'];
       request.fields['ingredients'] = json.encode(recipeData['ingredients']);
       request.fields['instructions'] = json.encode(recipeData['instructions']);
-      request.fields['userId'] = recipeData['userId'].toString();
-      
+    
       final emotions = recipeData['emotions'] ?? [];
       request.fields['emotions'] = json.encode(emotions);
       
@@ -225,9 +309,10 @@ static Future<bool> uploadRecipe(Map<String, dynamic> recipeData, File? imageFil
 //method to get ingredients
 static Future<List<Map<String, dynamic>>> getIngredients() async {
   try {
+    await ensureToken(); // Ensure token is loaded
     final response = await http.get(
       Uri.parse('$baseUrl/api/ingredients'),
-      headers: {'Content-Type': 'application/json'},
+      headers: getHeaders(),
     );
     
     if (response.statusCode == 200) {
@@ -244,10 +329,11 @@ static Future<List<Map<String, dynamic>>> getIngredients() async {
 //method to create new ingredient
 static Future<bool> addIngredient(String name) async {
   try {
+    await ensureToken(); // Ensure token is loaded
     final response = await http.post(
       Uri.parse('$baseUrl/api/ingredients'),
       body: json.encode({'name': name}),
-      headers: {'Content-Type': 'application/json'},
+      headers: getHeaders(),
     );
     return response.statusCode == 201;
   } catch (e) {
@@ -257,11 +343,12 @@ static Future<bool> addIngredient(String name) async {
 }
 
 // Get user's favorite recipes
-static Future<List<Map<String, dynamic>>> getUserFavorites(int userId) async {
+static Future<List<Map<String, dynamic>>> getUserFavorites() async {
   try {
+    await ensureToken(); // Ensure token is loaded
     final response = await http.get(
-      Uri.parse('$baseUrl/api/users/$userId/favorites'),
-      headers: {'Content-Type': 'application/json'},
+      Uri.parse('$baseUrl/api/users/favorites'),
+      headers: getHeaders(),
     );
     
     if (response.statusCode == 200) {
@@ -276,17 +363,16 @@ static Future<List<Map<String, dynamic>>> getUserFavorites(int userId) async {
 }
 
 // Add recipe to favorites
-static Future<bool> addToFavorites(int userId, int recipeId) async {
-  debugPrint('📤 API: Adding favorite - User: $userId, Recipe: $recipeId');
+static Future<bool> addToFavorites( int recipeId) async {
   debugPrint('📤 URL: $baseUrl/api/users/favorites');
   try {
+    await ensureToken(); // Ensure token is loaded
     final response = await http.post(
       Uri.parse('$baseUrl/api/users/favorites'),
       body: json.encode({
-        'userId': userId,
         'recipeId': recipeId,
       }),
-      headers: {'Content-Type': 'application/json'},
+      headers: getHeaders(),
     );
     
     return response.statusCode == 201;
@@ -297,15 +383,15 @@ static Future<bool> addToFavorites(int userId, int recipeId) async {
 }
 
 // Remove recipe from favorites
-static Future<bool> removeFromFavorites(int userId, int recipeId) async {
+static Future<bool> removeFromFavorites( int recipeId) async {
   try {
+    await ensureToken(); // Ensure token is loaded
     final response = await http.delete(
       Uri.parse('$baseUrl/api/users/favorites'),
       body: json.encode({
-        'userId': userId,
         'recipeId': recipeId,
       }),
-      headers: {'Content-Type': 'application/json'},
+      headers: getHeaders(),
     );
     
     return response.statusCode == 200;
@@ -316,10 +402,12 @@ static Future<bool> removeFromFavorites(int userId, int recipeId) async {
 }
 
 // Check if recipe is favorited by user
-static Future<bool> isRecipeFavorited(int userId, int recipeId) async {
+static Future<bool> isRecipeFavorited( int recipeId) async {
   try {
+    await ensureToken(); // Ensure token is loaded
     final response = await http.get(
-      Uri.parse('$baseUrl/api/users/favorites/check?userId=$userId&recipeId=$recipeId'),
+      Uri.parse('$baseUrl/api/users/favorites/check?recipeId=$recipeId'),
+      headers: getHeaders(),
     );
     
     if (response.statusCode == 200) {
@@ -334,10 +422,12 @@ static Future<bool> isRecipeFavorited(int userId, int recipeId) async {
 }
 
 // Check if user is admin
-static Future<bool> isUserAdmin(int userId) async {
+static Future<bool> isUserAdmin() async {
     try {
+      await ensureToken(); // Ensure token is loaded
       final response = await http.get(
-        Uri.parse('$baseUrl/api/users/$userId/is-admin'),
+        Uri.parse('$baseUrl/api/users/is-admin'),
+        headers: getHeaders(),
       );
       
       if (response.statusCode == 200) {
@@ -352,11 +442,12 @@ static Future<bool> isUserAdmin(int userId) async {
   }
 
 // Get user's own recipes
-static Future<List<Map<String, dynamic>>> getUserRecipes(int userId) async {
+static Future<List<Map<String, dynamic>>> getUserRecipes() async {
     try {
+      await ensureToken(); // Ensure token is loaded
       final response = await http.get(
-        Uri.parse('$baseUrl/api/users/$userId/recipes'),
-        headers: {'Content-Type': 'application/json'},
+        Uri.parse('$baseUrl/api/users/recipes'),
+        headers: getHeaders(),
       );
       
       if (response.statusCode == 200) {
@@ -375,22 +466,23 @@ static Future<bool> updateRecipe(
   int recipeId,
   Map<String, dynamic> recipeData,
   File? imageFile,
-  int userId
 ) async {
   debugPrint('📤 API: updateRecipe called');
   debugPrint('   Recipe ID: $recipeId');
-  debugPrint('   User ID: $userId');
   debugPrint('   Data: $recipeData');
   debugPrint('   Has image: ${imageFile != null}');
   
   try {
+    await ensureToken(); // Ensure token is loaded
     var request = http.MultipartRequest(
       'PUT', 
       Uri.parse('$baseUrl/api/recipes/$recipeId')
     );
     
+    // Add authorization header
+    request.headers['Authorization'] = 'Bearer $_token';
+
     // Add recipe data
-    request.fields['userId'] = userId.toString();
     request.fields['name'] = recipeData['name'];
     request.fields['category'] = recipeData['category'];
     request.fields['time'] = recipeData['time'];
@@ -429,15 +521,12 @@ static Future<bool> updateRecipe(
 }
 
 // Delete recipe with ownership check
-static Future<bool> deleteRecipe(int recipeId, int userId) async {
-    debugPrint('📤 API: deleteRecipe called - recipeId: $recipeId, userId: $userId');
+static Future<bool> deleteRecipe(int recipeId) async {
     try {
+      await ensureToken(); // Ensure token is loaded
       final response = await http.delete(
         Uri.parse('$baseUrl/api/recipes/$recipeId'),
-        body: json.encode({
-          'userId': userId,
-        }),
-        headers: {'Content-Type': 'application/json'},
+        headers: getHeaders(),
       );
       
       return response.statusCode == 200;
@@ -448,11 +537,12 @@ static Future<bool> deleteRecipe(int recipeId, int userId) async {
   }
 
 // Get all recipes with edit permissions
-static Future<List<Map<String, dynamic>>> getRecipesWithPermissions(int userId) async {
+static Future<List<Map<String, dynamic>>> getRecipesWithPermissions() async {
     try {
+      await ensureToken(); // Ensure token is loaded
       final response = await http.get(
-        Uri.parse('$baseUrl/api/recipes/with-permissions?userId=$userId'),
-        headers: {'Content-Type': 'application/json'},
+        Uri.parse('$baseUrl/api/recipes/with-permissions'),
+        headers: getHeaders(),
       );
       
       debugPrint('📡 Recipes with permissions: ${response.statusCode}');
@@ -471,6 +561,7 @@ static Future<List<Map<String, dynamic>>> getRecipesWithPermissions(int userId) 
 // Get recipe ownership info (check if user created the recipe)
 static Future<Map<String, dynamic>?> getRecipeOwner(int recipeId) async {
   try {
+    await ensureToken(); // Ensure token is loaded
     final response = await http.get(
       Uri.parse('$baseUrl/api/recipes/$recipeId/owner'),
     );

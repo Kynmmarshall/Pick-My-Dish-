@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:pick_my_dish/Models/user_model.dart';
+import 'package:pick_my_dish/Services/api_service.dart';
 
 /// Provider that holds and manages the current authenticated user.
 /// 
@@ -9,6 +10,7 @@ import 'package:pick_my_dish/Models/user_model.dart';
 class UserProvider with ChangeNotifier {
   // Backing field for the current user. Null when no user is logged in.
   User? _user;
+  String? _token;
   int _userId = 0;
   DateTime _joined = DateTime.now();
   /// Returns the current user, or null if not signed in.
@@ -34,31 +36,70 @@ class UserProvider with ChangeNotifier {
   /// Indicates whether a user is currently logged in.
   bool get isLoggedIn => _user != null;
 
+  bool _isDisposed = false;
+
+   // Add this method:
+  @override
+  void dispose() {
+    _isDisposed = true;
+    super.dispose();
+  }
   
-  /// Set (or replace) the current user and notify listeners.
-  ///
-  /// Call this after a successful login or when user data is fetched.
+  // Safe notify method:
+  void safeNotify() {
+    if (!_isDisposed) {
+      notifyListeners();
+    }
+  }
+  
+  // Update ALL notifyListeners() calls to safeNotify():
   void setUser(User user) {
     _user = user;
-    notifyListeners(); // Notify widgets that depend on user data.
+    safeNotify(); // <-- Change this
   }
 
+  Future<bool> autoLogin() async {
+    // Check if token exists and is valid
+    final result = await ApiService.verifyToken();
+    
+    if (result?['valid'] == true && result?['user'] != null) {
+      _user = User.fromJson(result!['user']);
+      _userId = _user!.id.isNotEmpty ? int.parse(_user!.id) : 0;
+      safeNotify();
+      return true;
+    }
+    
+    return false;
+  }
+  
+  Future<void> login(String email, String password) async {
+    final result = await ApiService.login(email, password);
+    
+    if (result != null && result['error'] == null) {
+      _user = User.fromJson(result['user']);
+      _userId = _user!.id.isNotEmpty ? int.parse(_user!.id) : 0;
+      safeNotify();
+    } else {
+      throw Exception(result?['error'] ?? 'Login failed');
+    }
+  }
+
+
   /// Create and set user from JSON data (typically from API response).
-  ///
   /// Convenience method that uses [User.fromJson] constructor.
   void setUserFromJson(Map<String, dynamic> userData) {
     _user = User.fromJson(userData);
-    notifyListeners();
+    safeNotify();
   }
 
   /// Update only the username for the current user and notify listeners.
   ///
   /// If there is no current user, this method does nothing.
-  void updateUsername(String newUsername, int userId) {
+  void updateUsername(String newUsername) {
     if (_user != null) {
       // Use the model's copyWith to preserve other fields.
       _user = _user!.copyWith(username: newUsername);
-      notifyListeners();
+      safeNotify();
     }
   }
 
@@ -68,19 +109,19 @@ class UserProvider with ChangeNotifier {
   /// If there is no current user, this method does nothing.
   void updateProfilePicture(String imagePath) {
     _profilePicture = imagePath;
-    notifyListeners();
+    safeNotify();
   }
 
 
   /// Clear the current user (log out) and notify listeners.
   void clearUser() {
     _user = null;
-    notifyListeners();
+    safeNotify();
   }
 
   void setUserId(int userId) {
     _userId = userId;
-    notifyListeners();
+    safeNotify();
   }
   /// Debug method to print current user state
   void printUserState() {
@@ -108,7 +149,7 @@ class UserProvider with ChangeNotifier {
     // Clear local storage (optional)
     _clearLocalStorage();
     
-    notifyListeners();
+    safeNotify();
   }
 
   Future<void> _clearImageCache() async {
@@ -136,10 +177,14 @@ class UserProvider with ChangeNotifier {
     // final prefs = await SharedPreferences.getInstance();
     // await prefs.clear();
   }
-
-  /// Logout - clear everything
-  void logout() {
+  
+  Future<void> logout() async {
+    await ApiService.removeToken();
+    _user = null;
+    _token = null;
     clearAllUserData();
-    debugPrint('✅ User logged out - all data cleared');
+    safeNotify();
   }
+
+
 }

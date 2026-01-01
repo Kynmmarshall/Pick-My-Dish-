@@ -15,20 +15,26 @@ class RecipeProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get error => _error;
   bool get mounted => true; 
-
+   bool _isDisposed = false;
+  
+  @override
+  void dispose() {
+    _isDisposed = true;
+    super.dispose();
+  }
+  
+  void safeNotify() {
+    if (!_isDisposed) {
+      notifyListeners();
+    }
+  }
   // Check if recipe is favorite
   bool isFavorite(int recipeId) => _userFavorites.any((recipe) => recipe.id == recipeId);
 
   // Toggle favorite
-  Future<void> toggleFavorite(int userId, int recipeId) async {
+  Future<void> toggleFavorite( int recipeId) async {
     debugPrint('🔄 RecipeProvider.toggleFavorite called');
-    debugPrint('   👤 User ID: $userId');
     debugPrint('   📝 Recipe ID: $recipeId');
-    
-    if (userId == 0) {
-      debugPrint('❌ Cannot toggle favorite: User ID is 0 (not logged in)');
-      return;
-    }
 
     final recipe = getRecipeById(recipeId);
     if (recipe == null) {
@@ -43,14 +49,14 @@ class RecipeProvider with ChangeNotifier {
     bool success;
     if (wasFavorite) {
       debugPrint('🗑️ Removing from favorites...');
-      success = await ApiService.removeFromFavorites(userId, recipeId);
+      success = await ApiService.removeFromFavorites(recipeId);
       if (success) {
         _userFavorites.removeWhere((r) => r.id == recipeId);
         debugPrint('✅ Removed from local list');
       }
     } else {
       debugPrint('💖 Adding to favorites...');
-      success = await ApiService.addToFavorites(userId, recipeId);
+      success = await ApiService.addToFavorites(recipeId);
       if (success) {
         _userFavorites.add(recipe);
         debugPrint('✅ Added to local list');
@@ -73,7 +79,7 @@ class RecipeProvider with ChangeNotifier {
       // Schedule UI update
       Future.microtask(() {
         debugPrint('📢 Notifying listeners...');
-        notifyListeners();
+        safeNotify();
         debugPrint('📊 Current favorites count: ${_userFavorites.length}');
       });
     } else {
@@ -91,20 +97,11 @@ class RecipeProvider with ChangeNotifier {
   }
   
  // Load user's favorite recipes
-  Future<void> loadUserFavorites(int userId) async {
-  if (userId == 0) {
-    _userFavorites = [];
-    // Schedule for next frame
-    Future.microtask(() {
-      notifyListeners();
-    });
-    return;
-  }
-  
+  Future<void> loadUserFavorites() async {
   _isLoading = true;
   
   try {
-    final favoriteMaps = await ApiService.getUserFavorites(userId);
+    final favoriteMaps = await ApiService.getUserFavorites();
     _userFavorites = favoriteMaps.map((map) => Recipe.fromJson(map)).toList();
   } catch (e) {
     _error = 'Failed to load favorites: $e';
@@ -113,7 +110,7 @@ class RecipeProvider with ChangeNotifier {
     _isLoading = false;
     // Schedule for next frame
     Future.microtask(() {
-      notifyListeners();
+      safeNotify();
     });
   }
 }
@@ -122,14 +119,14 @@ class RecipeProvider with ChangeNotifier {
   void logout() {
     _recipes.clear();
     _userFavorites.clear();
-    notifyListeners();
+    safeNotify();
   }
 
   // Load all recipes from API
   Future<void> loadRecipes() async {
     _isLoading = true;
     _error = null;
-    notifyListeners();
+    safeNotify();
 
     try {
       final List<Map<String, dynamic>> recipeMaps = await ApiService.getRecipes();
@@ -143,7 +140,7 @@ class RecipeProvider with ChangeNotifier {
       debugPrint('❌ RecipeProvider load error: $e');
     } finally {
       _isLoading = false;
-      notifyListeners();
+      safeNotify();
     }
   }
   
@@ -205,10 +202,9 @@ class RecipeProvider with ChangeNotifier {
 
   // Check if recipe can be edited/deleted by current user
   // In RecipeProvider class
-  bool canEditRecipe(int recipeId, int userId, bool isAdmin) {
+  bool canEditRecipe(int recipeId, int currentUserId, bool isAdmin) {
     debugPrint('🔍 Checking edit permission:');
     debugPrint('   Recipe ID: $recipeId');
-    debugPrint('   User ID: $userId');
     debugPrint('   Is Admin: $isAdmin');
     debugPrint('   Available recipes count: ${_recipes.length}');
     
@@ -224,28 +220,29 @@ class RecipeProvider with ChangeNotifier {
       orElse: () => Recipe.empty(),
     );
     
+    
     debugPrint('   Recipe found: ${recipe.id != 0}');
     debugPrint('   Recipe creator ID: ${recipe.userId}');
-    debugPrint('   Current user ID: $userId');
-    
-    final canEdit = recipe.id != 0 && recipe.userId == userId;
+    final canEdit = recipe.id != 0;
     debugPrint('   Can edit (non-admin): $canEdit');
     
-    return canEdit;
+    // Check if current user owns this recipe
+    return recipe.id != 0 && recipe.userId == currentUserId;
+
   }
 
-  bool canDeleteRecipe(int recipeId, int userId, bool isAdmin) {
-    return canEditRecipe(recipeId, userId, isAdmin);
+  bool canDeleteRecipe(int recipeId, int currentUserId, bool isAdmin) {
+    return canEditRecipe(recipeId, currentUserId, isAdmin);
   }
 
   // Load recipes with permissions
-  Future<void> loadRecipesWithPermissions(int userId) async {
+  Future<void> loadRecipesWithPermissions() async {
     _isLoading = true;
     _error = null;
-    notifyListeners();
+    safeNotify();
 
     try {
-      final recipeMaps = await ApiService.getRecipesWithPermissions(userId);
+      final recipeMaps = await ApiService.getRecipesWithPermissions();
       _recipes = recipeMaps.map((json) => Recipe.fromJson(json)).toList();
       
       _syncFavoriteStatus();
@@ -255,21 +252,21 @@ class RecipeProvider with ChangeNotifier {
       debugPrint('❌ RecipeProvider load error: $e');
     } finally {
       _isLoading = false;
-      notifyListeners();
+      safeNotify();
     }
   }
 
   // Delete recipe
-  Future<bool> deleteRecipe(int recipeId, int userId) async {
-    debugPrint('📤 RecipeProvider.deleteRecipe called: recipeId=$recipeId, userId=$userId');
+  Future<bool> deleteRecipe(int recipeId) async {
+    debugPrint('📤 RecipeProvider.deleteRecipe called: recipeId=$recipeId');
     try {
-      final success = await ApiService.deleteRecipe(recipeId, userId);
+      final success = await ApiService.deleteRecipe(recipeId);
       debugPrint('📡 ApiService.deleteRecipe response: $success');
       if (success) {
         _recipes.removeWhere((recipe) => recipe.id == recipeId);
         _userFavorites.removeWhere((recipe) => recipe.id == recipeId);
         debugPrint('✅ Recipe removed from local lists');
-        notifyListeners();
+        safeNotify();
       }
       return success;
     } catch (e) {
@@ -295,7 +292,7 @@ class RecipeProvider with ChangeNotifier {
       } else {
         _recipes.add(currentRecipe);
       }
-      notifyListeners();
+      safeNotify();
     } catch (e) {
       debugPrint('Error loading single recipe: $e');
     }

@@ -368,7 +368,7 @@ class RecipesScreenState extends State<RecipesScreen> {
     final recipeProvider = Provider.of<RecipeProvider>(context, listen: false);
     final userProvider = Provider.of<UserProvider>(context, listen: false);
     
-    recipeProvider.toggleFavorite(userProvider.userId, recipe.id);
+    recipeProvider.toggleFavorite(recipe.id);
     
     // Update local state if needed
     setState(() {

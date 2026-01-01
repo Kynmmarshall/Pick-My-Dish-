@@ -34,7 +34,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
     try {
       // Add delay to avoid build conflicts
       await Future.delayed(const Duration(milliseconds: 10));
-      await recipeProvider.loadUserFavorites(userProvider.userId);
+      await recipeProvider.loadUserFavorites();
     } catch (e) {
       debugPrint('Error loading favorites: $e');
     }
@@ -109,7 +109,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
     );
     
     if (shouldRemove == true && mounted) {
-      await recipeProvider.toggleFavorite(userProvider.userId,recipe.id);
+      await recipeProvider.toggleFavorite(recipe.id);
       // Refresh the list
       await _loadFavorites();
     }
@@ -292,7 +292,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                           },
                           onDismissed: (direction) async {
                             final recipeProvider = Provider.of<RecipeProvider>(context, listen: false);
-                            await recipeProvider.toggleFavorite(userProvider.userId,recipe.id);
+                            await recipeProvider.toggleFavorite(recipe.id);
                           },
                           child: GestureDetector(
                             onTap: () => _showRecipeDetails(recipe),

@@ -24,13 +24,15 @@ class User {
     String? email,
     String? profileImage,
     DateTime? joinedDate,
+    bool? isAdmin,
   }) {
     return User(
       id: id ?? this.id,
       username: username ?? this.username,
       email: email ?? this.email,
       profileImage: profileImage ?? this.profileImage,
-      joinedDate: joinedDate ?? this.joinedDate
+      joinedDate: joinedDate ?? this.joinedDate,
+      isAdmin: isAdmin ?? this.isAdmin,
     );
   }
 
@@ -43,7 +45,7 @@ class User {
       profileImage: json['profile_image_path'] ?? json['profileImage'],
       joinedDate: json['created_at'] != null 
         ? DateTime.parse(json['created_at'])  // ← Parse from database
-        : null,
+        : DateTime.now(),
       isAdmin: (json['is_admin'] ?? 0) == 1, // Convert int to bool
     );
   }
@@ -62,7 +64,7 @@ class User {
   // For debugging
   @override
   String toString() {
-    return 'User(id: $id, username: $username, email: $email, profileImage: $profileImage, joinedDate: $joinedDate)';
+    return 'User(id: $id, username: $username, email: $email, profileImage: $profileImage, joinedDate: $joinedDate, isAdmin: $isAdmin)';
   }
 
   // For equality comparison
@@ -75,12 +77,13 @@ class User {
         other.username == username &&
         other.email == email &&
         other.profileImage == profileImage &&
-        other.joinedDate == joinedDate;
+        other.joinedDate == joinedDate &&
+        other.isAdmin == isAdmin;
 
   }
 
   @override
   int get hashCode {
-    return Object.hash(id, username, email, profileImage, joinedDate);
+    return Object.hash(id, username, email, profileImage, joinedDate, isAdmin);
   }
 }

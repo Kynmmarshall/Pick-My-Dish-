@@ -55,7 +55,7 @@ test('updateUsername updates username', () {
   userProvider.setUser(user);
   userProvider.setUserId(123);
 
-  userProvider.updateUsername('newname', 123);
+  userProvider.updateUsername('newname');
 
   expect(userProvider.username, 'newname');
   expect(userProvider.user?.username, 'newname');

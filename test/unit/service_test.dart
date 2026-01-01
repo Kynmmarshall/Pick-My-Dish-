@@ -31,7 +31,6 @@ test('All API methods exist and have correct signatures', () {
   expect(ApiService.deleteRecipe, isNotNull);
   expect(ApiService.getRecipesWithPermissions, isNotNull);
   expect(ApiService.getRecipeOwner, isNotNull);
-  expect(ApiService.testAuth, isNotNull);
   expect(ApiService.testBaseUrl, isNotNull);
   expect(ApiService.testRecipeUpload, isNotNull);
   expect(ApiService.getProfilePicture, isNotNull);
@@ -44,24 +43,23 @@ test('ApiService methods return correct types', () async {
     () => ApiService.testConnection(),
     () => ApiService.login('test', 'test'),
     () => ApiService.register('test', 'test@test.com', 'test'),
-    () => ApiService.updateUsername('test', 1),
+    () => ApiService.updateUsername('test'),
     () => ApiService.getRecipes(),
     () => ApiService.getIngredients(),
     () => ApiService.addIngredient('test'),
-    () => ApiService.getUserFavorites(1),
-    () => ApiService.addToFavorites(1, 1),
-    () => ApiService.removeFromFavorites(1, 1),
-    () => ApiService.isRecipeFavorited(1, 1),
-    () => ApiService.isUserAdmin(1),
-    () => ApiService.getUserRecipes(1),
-    () => ApiService.updateRecipe(1, {'name': 'test'}, null, 1),
-    () => ApiService.deleteRecipe(1, 1),
-    () => ApiService.getRecipesWithPermissions(1),
+    () => ApiService.getUserFavorites(),
+    () => ApiService.addToFavorites(1),
+    () => ApiService.removeFromFavorites(1),
+    () => ApiService.isRecipeFavorited(1),
+    () => ApiService.isUserAdmin(),
+    () => ApiService.getUserRecipes(),
+    () => ApiService.updateRecipe(1, {'name': 'test'}, null),
+    () => ApiService.deleteRecipe(1),
+    () => ApiService.getRecipesWithPermissions(),
     () => ApiService.getRecipeOwner(1),
-    () => ApiService.testAuth(),
     () => ApiService.testBaseUrl(),
     () => ApiService.testRecipeUpload(),
-    () => ApiService.getProfilePicture(1),
+    () => ApiService.getProfilePicture(),
   ];
 
   for (var method in methods) {
