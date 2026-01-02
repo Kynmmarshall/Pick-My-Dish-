@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:pick_my_dish/Providers/user_provider.dart';
 import 'package:pick_my_dish/Screens/home_screen.dart';
 import 'package:pick_my_dish/Screens/login_screen.dart';
+import 'package:provider/provider.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -16,14 +18,31 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    _timer = Timer(const Duration(seconds: 3), () {
+    _checkAuth();
+  }
+
+  Future<void> _checkAuth() async {
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    
+    await Future.delayed(Duration(seconds: 2)); // Show splash for 2 seconds
+    
+    final success = await userProvider.autoLogin();
+    
+    if (success) {
+      // Navigate to home
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => HomeScreen()),
+      );
+    } else {
+      // Navigate to login
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => LoginScreen()),
       );
-    });
+    }
   }
-
+  
   @override
   void dispose() {
     super.dispose();
@@ -44,10 +63,12 @@ class _SplashScreenState extends State<SplashScreen> {
               "What should I eat today?",
               style: TextStyle(
                 color: Colors.white,
-                fontSize: 16,
+                fontSize: 18,
                 fontFamily: 'TimesNewRoman',
               ),
             ),
+            const SizedBox(height: 20),
+            const CircularProgressIndicator(color: Colors.orange),
           ],
         ),
       ),

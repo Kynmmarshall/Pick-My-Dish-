@@ -70,14 +70,31 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
             leading: Padding(
               padding: const EdgeInsets.only(top: 20),
               child: IconButton(
-                icon: const Icon(Icons.arrow_back, color: Colors.black, size: 30),
+              icon: Icon(
+                Icons.arrow_back, 
+                color: const Color.fromARGB(255, 255, 255, 255), 
+                size: 30,
+                shadows: [
+                  Shadow(
+                    color: const Color.fromARGB(255, 0, 0, 0).withOpacity(1),
+                    blurRadius: 6,
+                    offset: Offset(0,3),
+                  ),
+                ],
+              ),
                 onPressed: () => Navigator.pop(context),
               ),
             ),
             actions: [
               if (canEdit || canDelete) // Show menu if user has permissions
                 PopupMenuButton<String>(
-                  icon: Icon(Icons.more_vert, color: Colors.black, size: 50),
+                  icon: Icon(Icons.more_vert, color: const Color.fromARGB(255, 255, 255, 255), size: 50,shadows: [
+                  Shadow(
+                    color: const Color.fromARGB(255, 0, 0, 0).withOpacity(1),
+                    blurRadius: 6,
+                    offset: Offset(0,3),
+                  ),
+                ],),
                   onSelected: (value) {
                     if (value == 'edit') {
                       _navigateToEditScreen(recipe);
@@ -128,6 +145,13 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                     isFavorite ? Icons.favorite : Icons.favorite_border,
                     color: Colors.orange,
                     size: 30,
+                    shadows: [
+                  Shadow(
+                    color: const Color.fromARGB(255, 0, 0, 0).withOpacity(1),
+                    blurRadius: 6,
+                    offset: Offset(0,3),
+                  ),
+                ],
                   ),
                   onPressed: () {
                     recipeProvider.toggleFavorite(recipe.id);

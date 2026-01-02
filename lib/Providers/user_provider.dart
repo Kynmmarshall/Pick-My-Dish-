@@ -59,17 +59,34 @@ class UserProvider with ChangeNotifier {
   }
 
   Future<bool> autoLogin() async {
-    // Check if token exists and is valid
-    final result = await ApiService.verifyToken();
-    
-    if (result?['valid'] == true && result?['user'] != null) {
-      _user = User.fromJson(result!['user']);
-      _userId = _user!.id.isNotEmpty ? int.parse(_user!.id) : 0;
-      safeNotify();
-      return true;
+    try {
+      debugPrint('🔐 Attempting auto-login...');
+      
+      final result = await ApiService.verifyToken();
+      
+      if (result?['valid'] == true && result?['user'] != null) {
+        debugPrint('✅ Token valid, setting user...');
+        
+        _user = User.fromJson(result!['user']);
+        _userId = _user!.id.isNotEmpty ? int.parse(_user!.id) : 0;
+        
+        debugPrint('👤 User loaded: ${_user!.username}');
+        
+        // IMPORTANT: Notify listeners on next frame
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          safeNotify(); // <-- Change this
+        });
+        
+        return true;
+      } else {
+        debugPrint('❌ Token invalid or expired');
+        await ApiService.removeToken(); // Clear invalid token
+        return false;
+      }
+    } catch (e) {
+      debugPrint('❌ Auto-login error: $e');
+      return false;
     }
-    
-    return false;
   }
   
   Future<void> login(String email, String password) async {

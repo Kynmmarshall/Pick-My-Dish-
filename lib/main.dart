@@ -2,6 +2,8 @@
 import 'package:flutter/material.dart';
 import 'package:pick_my_dish/Providers/recipe_provider.dart';
 import 'package:pick_my_dish/Providers/user_provider.dart';
+import 'package:pick_my_dish/Screens/home_screen.dart';
+import 'package:pick_my_dish/Screens/login_screen.dart';
 import 'package:pick_my_dish/Services/api_service.dart';
 import 'package:provider/provider.dart';
 import 'package:pick_my_dish/Screens/splash_screen.dart';
@@ -22,14 +24,73 @@ void main() async{
   );
 }
 
-class PickMyDish extends StatelessWidget {
+class PickMyDish extends StatefulWidget {
   const PickMyDish({super.key});
 
   @override
+  State<PickMyDish> createState() => _PickMyDishState();
+}
+
+class _PickMyDishState extends State<PickMyDish> {
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _autoLogin();
+  }
+
+  Future<void> _autoLogin() async {
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    
+    try {
+      // Try to auto-login with stored token
+      final success = await userProvider.autoLogin();
+      
+      if (success) {
+        debugPrint('✅ Auto-login successful');
+        
+        // Load user favorites if logged in
+        final recipeProvider = Provider.of<RecipeProvider>(context, listen: false);
+        await recipeProvider.loadUserFavorites();
+      } else {
+        debugPrint('❌ No valid token found');
+      }
+    } catch (e) {
+      debugPrint('❌ Auto-login error: $e');
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
+    if (_isLoading) {
+      return MaterialApp(
+        home: Scaffold(
+          backgroundColor: Colors.black,
+          body: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                CircularProgressIndicator(color: Colors.orange),
+                SizedBox(height: 20),
+                Text('Loading...', style: TextStyle(color: Colors.white)),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+    
+    return MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: SplashScreen(),
+      home: Consumer<UserProvider>(
+        builder: (context, userProvider, child) {
+          // Show login screen if not logged in, home screen if logged in
+          return userProvider.isLoggedIn ? HomeScreen() : LoginScreen();
+        },
+      ),
     );
   }
 }
