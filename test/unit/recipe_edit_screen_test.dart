@@ -87,5 +87,46 @@ void main() {
       await tester.tap(happyChip, warnIfMissed: false);
       await tester.pump();
     });
+
+    testWidgets('selecting ingredient shows chip for that ingredient', (tester) async {
+      await pumpEditor(tester);
+
+      expect(find.text('Eggs'), findsOneWidget);
+
+      final eggsTile = find.widgetWithText(CheckboxListTile, 'Eggs').first;
+      await tester.ensureVisible(eggsTile);
+      await tester.tap(eggsTile, warnIfMissed: false);
+      await tester.pump();
+
+      expect(find.text('Eggs'), findsNWidgets(2));
+    });
+
+    testWidgets('shows validation snackbar when name is empty', (tester) async {
+      await pumpEditor(tester);
+
+      await tester.enterText(find.byType(TextField).first, '');
+
+      final updateButton = find.text('Update Recipe');
+      await tester.ensureVisible(updateButton);
+      await tester.tap(updateButton, warnIfMissed: false);
+      await tester.pump();
+
+      expect(find.text('Please fill required fields'), findsOneWidget);
+    });
+
+    testWidgets('blocks update when user loses edit permission', (tester) async {
+      userProvider.setUserId(99); // Not the recipe owner
+
+      await pumpEditor(tester);
+      final updateButton = find.text('Update Recipe');
+      await tester.ensureVisible(updateButton);
+      await tester.tap(updateButton, warnIfMissed: false);
+      await tester.pump();
+
+      expect(
+        find.text('You are no longer authorized to edit this recipe'),
+        findsOneWidget,
+      );
+    });
   });
 }
