@@ -13,6 +13,8 @@
 \usepackage{hyperref}
 \usepackage{fontawesome5}
 \usepackage{multicol}
+\usetikzlibrary{positioning, fit, arrows.meta} % For TikZ positioning
+\usepackage{tabularx} % For tabular environment in nodes
 \usepackage{listings}
 \usetikzlibrary{calc}
 
@@ -509,133 +511,7 @@
 % SLIDE 5: SYSTEM ARCHITECTURE
 % ============================================================
 \begin{frame}{System Architecture}
-    \vspace*{0.2cm}
-    
-    \centering
-    \textcolor{Primary}{\large \textbf{PickMyDish - Complete Architecture with GitHub Integration}}
-    
-    \vspace{0.3cm}
-    
-    \begin{tikzpicture}[
-        box/.style={draw, thick, rounded corners=8pt, inner sep=8pt, align=center, minimum width=3cm},
-        cloud/.style={draw, thick, dashed, rounded corners=8pt, inner sep=10pt, fill=white},
-        arrow/.style={->, >=stealth, thick},
-        note/.style={font=\scriptsize, text=gray}
-    ]
-    
-        % ==================== TOP LAYER: GITHUB & CLIENTS ====================
-        % GitHub section
-        \node[box, fill=Primary!15, draw=Primary!50] (github) at (0, 8.5) 
-            {\textbf{GitHub Repositories}\\[2pt]
-            \scriptsize Backend (Node.js) Repo\\Frontend (Flutter) Repo};
-        \node[below=0.1cm of github, note] {\faGithub~github.com/Kynmmarshall/Pick-My-Dish};
-        
-        % Mobile Clients
-        \node[box, fill=Primary!20, draw=Primary!60, right=2cm of github] (mobile) 
-            {\textbf{Mobile Clients}\\[2pt]
-            \scriptsize Dark Theme UI\\Provider State Management\\Local Flutter Cache};
-        
-        % Arrow from GitHub to Mobile
-        \draw[arrow, Primary!60] (github) -- (mobile) 
-            node[midway, above, note] {CI/CD Pipeline};
-        
-        % ==================== MIDDLE LAYER: NETWORK & SECURITY ====================
-        % External Access
-        \node[box, fill=Secondary!15, draw=Secondary!50] (dns) at (-3, 6) 
-            {\textbf{External Access}\\[2pt]
-            \scriptsize DuckDNS\\pickmydish.duckdns.org};
-        
-        % SSL Certificates
-        \node[box, fill=Accent!15, draw=Accent!50, right=1.5cm of dns] (ssl) 
-            {\textbf{SSL}\\[2pt]
-            \scriptsize Let's Encrypt\\Certificates};
-        
-        % VPS Server
-        \node[box, fill=Secondary!20, draw=Secondary!60, right=1.5cm of ssl] (vps) 
-            {\textbf{Contabo VPS}\\[2pt]
-            \scriptsize 38.242.246.126\\Ubuntu Server};
-        
-        % HTTPS connection
-        \draw[arrow, Secondary!60, shorten >=5pt, shorten <=5pt] 
-            (dns) -- node[above, note] {HTTPS (Port 443)} (ssl);
-        \draw[arrow, Secondary!60, shorten >=5pt, shorten <=5pt] 
-            (ssl) -- (vps);
-        
-        % ==================== FIREWALL LAYER ====================
-        \node[box, fill=Warning!15, draw=Warning!50, minimum width=8cm] (firewall) at (0, 4.2) 
-            {\textbf{UFW Firewall Configuration}\\[2pt]
-            \scriptsize
-            \begin{tabular}{ll}
-                \textbf{Inbound:} & Port 22 (SSH), 80 (HTTP), 443 (HTTPS), 3000 (Node.js), 8080 (Jenkins)\\
-                \textbf{Outbound:} & All allowed, Port 3306 (MySQL local)
-            \end{tabular}};
-        
-        % ==================== VPS INTERNAL LAYERS ====================
-        % Web Layer (Nginx)
-        \node[box, fill=Primary!10, draw=Primary!40] (web) at (-4, 2.2) 
-            {\textbf{Web Layer (Nginx)}\\[2pt]
-            \scriptsize Reverse Proxy\\Static File Serving\\SSL Termination};
-        
-        % CI/CD Layer
-        \node[box, fill=Accent!10, draw=Accent!40, right=2cm of web] (ci) 
-            {\textbf{CI/CD Layer (Jenkins)}\\[2pt]
-            \scriptsize Automated Pipeline\\Flutter Build\\VPS Deployment};
-        
-        % Application Layer
-        \node[box, fill=Secondary!10, draw=Secondary!40] (app) at (-4, 0) 
-            {\textbf{Application Layer}\\[2pt]
-            \scriptsize Express.js Framework\\REST API Endpoints\\JWT Authentication};
-        
-        % Data Layer
-        \node[box, fill=Accent!20, draw=Accent!60, right=2cm of app] (data) 
-            {\textbf{Data Layer}\\[2pt]
-            \scriptsize MySQL Database\\Port: 3306\\Users, Recipes, Favorites};
-        
-        % ==================== STORAGE COMPONENTS ====================
-        % File Storage
-        \node[box, fill=gray!10, draw=gray!40, minimum width=4cm] (storage) at (2, -1.5) 
-            {\textbf{File Storage}\\[2pt]
-            \scriptsize
-            \begin{tabular}{l}
-                • APK Storage (Local)\\
-                • Website Files\\
-                • Uploads Directory\\
-                • Serve APK Download
-            \end{tabular}};
-        
-        % ==================== CONNECTIONS ====================
-        % VPS to Firewall
-        \draw[arrow, thick] (vps.south) -- (firewall.north);
-        
-        % Firewall to internal layers
-        \draw[arrow, thick] (firewall.south) -- (web.north);
-        \draw[arrow, thick] (firewall.south) -- (ci.north);
-        
-        % Web Layer connections
-        \draw[arrow, Primary!50, <->] (web.east) -- node[above, note] {Proxy /api/} (app.north);
-        \draw[arrow, Primary!50] (web) -- node[right, note] {Static Files} (storage);
-        
-        % CI/CD connections
-        \draw[arrow, Accent!50] (ci) -- node[right, note] {Deploy APK} (storage);
-        
-        % App to Data layer
-        \draw[arrow, Secondary!50, <->] (app.east) -- node[above, note] {Database Queries} (data.west);
-        
-        % Data to Storage
-        \draw[arrow, gray!50] (data.south) -- (storage.north);
-        
-        % Mobile to DNS
-        \draw[arrow, Primary!60, dashed] (mobile.south) to[out=-90, in=90] node[left, pos=0.3, note] {HTTP Requests} (dns.north);
-        
-        % ==================== BACKGROUND HIGHLIGHTS ====================
-        % Cloud boundary
-        \node[cloud, fit=(web) (ci) (app) (data) (storage), label={above:\textbf{VPS Internal Components}}] {};
-        
-    \end{tikzpicture}
-    
-    \vspace*{0.2cm}
-    \centering
-    \textcolor{gray}{\scriptsize \faCogs~Integrated CI/CD Pipeline • \faLock~Secure Multi-layer Architecture • \faArrowsAlt~Scalable Design}
+    \includegraphics[width=\paperwidth,height=\paperheight]{architecture-overview.png}
 \end{frame}
 
 % ============================================================
