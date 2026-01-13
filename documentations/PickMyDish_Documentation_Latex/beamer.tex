@@ -651,38 +651,32 @@
 % SLIDE 9: TESTING & METRICS
 % ============================================================
 \begin{frame}{Testing \& Quality Metrics}
-    \vspace*{0.3cm}
+    \vspace*{0.2cm}
 
     \begin{columns}[T]
-        % COVERAGE CARD
-        \column{0.48\textwidth}
+        % COVERAGE
+        \column{0.52\textwidth}
         \centering
         \textcolor{Primary}{\textbf{\large Coverage (Actual)}}
-        \vspace{0.35cm}
-        \begin{tikzpicture}[
-            bar/.style={rounded corners=4pt, minimum height=0.6cm, anchor=west},
-            label/.style={font=\footnotesize\bfseries, anchor=west}
-        ]
-            \node[label] at (0,2.1) {Unit};
-            \draw[bar, fill=Accent!70, draw=Accent!80, minimum width=3.1cm] (0,1.6) rectangle ++(3.1,0.6);
-            \node[font=\scriptsize\bfseries] at (3.3,1.9) {62\%};
-
-            \node[label] at (0,0.8) {Integration};
-            \draw[bar, fill=Primary!70, draw=Primary!80, minimum width=2.0cm] (0,0.3) rectangle ++(2.0,0.6);
-            \node[font=\scriptsize\bfseries] at (2.2,0.6) {40\%};
-
-            \node[label] at (0,-0.5) {E2E (happy path)};
-            \draw[bar, fill=Secondary!60, draw=Secondary!70, minimum width=1.6cm] (0,-1.0) rectangle ++(1.6,0.6);
-            \node[font=\scriptsize\bfseries] at (1.8,-0.7) {32\%};
-
-            % Target line
-            \draw[dashed, gray] (2.8,-1.2) -- (2.8,2.6);
-            \node[font=\tiny\bfseries, align=center, gray] at (2.8,2.5) {75\% target};
+        \vspace{0.3cm}
+        \begin{tikzpicture}[x=1cm,y=1cm]
+            \fill[white, opacity=0.95, rounded corners=8pt] (-0.4,-0.45) rectangle (5.7,1.2);
+            \draw[fill=Primary!18, draw=Primary!45, rounded corners=6pt] (0,0) rectangle (5,0.5);
+            \draw[fill=Accent!70, draw=Accent!80, rounded corners=6pt] (0,0) rectangle (4.05,0.5);
+            \draw[dashed, gray] (4.0,-0.15) -- (4.0,0.65);
+            \node[font=\scriptsize\bfseries, text=DarkBg!80, anchor=west] at (4.08,0.58) {80\% target};
+            \node[font=\normalsize\bfseries, text=DarkBg] at (2.3,0.8) {80.9\% actual};
         \end{tikzpicture}
-        \vspace{0.2cm}
-        \textcolor{DarkBg!70}{\scriptsize Next: prioritize E2E and integration to hit 75\%.}
+        \vspace{0.25cm}
+        \textcolor{DarkBg!70}{\scriptsize Lowest coverage (focus next):}
+        \vspace{0.1cm}
+        \begin{tabular}{l r}
+            \textbf{profile\_screen.dart} & 65.1\% \\
+            \textbf{recipe\_upload\_screen.dart} & 65.6\% \\
+            \textbf{recipe\_edit\_screen.dart} & 68.5\% \\
+        \end{tabular}
 
-        % PERFORMANCE CARD
+        % PERFORMANCE
         \column{0.48\textwidth}
         \centering
         \textcolor{Secondary}{\textbf{\large Performance (Latest Run)}}
@@ -692,18 +686,19 @@
             \rowcolor{Secondary!20}
             \textbf{Metric} & \textbf{Target} & \textbf{Actual} \\
             \hline
-            Recipe Load Time & \textcolor{Accent}{\textbf{<2s}} & \textbf{1.6s} \\
+            Recipe Load Time & \textcolor{Accent}{\textbf{2s}} & \textbf{1.6s} \\
             \hline
-            API Response (p95) & \textcolor{Accent}{\textbf{<500ms}} & \textbf{410ms} \\
+            API Response & \textcolor{Accent}{\textbf{500ms}} & \textbf{410ms} \\
             \hline
-            DB Query (p95) & \textcolor{Accent}{\textbf{<300ms}} & \textbf{240ms} \\
+            DB Query & \textcolor{Accent}{\textbf{300ms}} & \textbf{240ms} \\
             \hline
             Uptime (30d) & \textcolor{Accent}{\textbf{99.8\%}} & \textbf{99.6\%} \\
             \hline
         \end{tabularx}
         \vspace{0.2cm}
-        \textcolor{DarkBg!70}{\scriptsize Actions: cache hot recipes, tighten API p95, improve uptime alerts.}
-    \end{columns}
+\textcolor{DarkBg!70}{\scriptsize \textbf{Optimizations:} \\• Redis caching for frequent recipes\\ • API response optimization \\• Real-time monitoring alerts}
+\end{columns}
+
 \end{frame}
 
 % ============================================================
@@ -724,7 +719,7 @@
             \vspace{0.3cm}
             \item Secure authentication system
             \vspace{0.3cm}
-            \item Offline-first architecture
+            \item Seamless data synchronization across devices
             \vspace{0.3cm}
             \item Fast, responsive UI
             \vspace{0.3cm}
@@ -764,25 +759,56 @@
 % ============================================================
 \begin{frame}[plain]
     \begin{tikzpicture}[remember picture, overlay]
-        \fill[color=Primary!5] (current page.south west) rectangle (current page.north east);
-        \fill[color=Secondary!10] (current page.north west) -- (current page.north east) -- 
-              ($(current page.north east)!0.4!(current page.south east)$) -- 
-              ($(current page.north west)!0.4!(current page.south west)$) -- cycle;
+        % Gradient background
+        \fill[left color=Primary!5, right color=Secondary!10] 
+            (current page.south west) rectangle (current page.north east);
+        
+        % Decorative shapes
+        \fill[Primary!15, rotate=30] 
+            ($(current page.north east)+(-2cm,-1cm)$) ellipse (3cm and 1.5cm);
+        \fill[Secondary!15, rotate=-20] 
+            ($(current page.south west)+(2cm,1cm)$) ellipse (4cm and 2cm);
     \end{tikzpicture}
     
     \centering
-    \vspace*{2cm}
+    \vspace*{0.5cm}
     
-    {\Huge \textbf{\textcolor{Primary}{Thank You!}}}\\[1cm]
+    {\Huge \textbf{\textcolor{Primary}{Thank You!}}}\\[0.8cm]
     
-    {\Large \textcolor{Secondary}{Questions?}}\\[2cm]
+    {\Large \textcolor{Secondary}{Questions \& Discussion}}\\[0.5cm]
     
-    \includegraphics[width=0.2\textwidth]{app-logo.png}\\[1.5cm]
+    \begin{columns}[T]
+        % Left column: App logo
+        \column{0.5\textwidth}
+        \centering
+        \includegraphics[width=0.4\textwidth]{app-logo.png}\\[0.5cm]
+        
+        {\small \faGithub\ \href{https://github.com/Kynmmarshall/Pick-My-Dish}{\underline{GitHub Repository}}}\\[0.5cm]
+        {\small \faGlobe\ \href{https://pickmydish.duckdns.org}{\underline{Live Application}}}\\[0.5cm]
+        
+        {\footnotesize \textcolor{gray}{ICT University - SEN3140 | January 2026}}
+        
+        % Right column: QR Code
+        \column{0.5\textwidth}
+        \centering
+        {\Large \textcolor{DarkBg}{Scan to Access}}\\[0.3cm]
+        
+        \begin{tikzpicture}
+            % QR code with decorative frame
+            \node[inner sep=0] (qrcode) at (0,0) 
+                {\includegraphics[width=0.35\textwidth]{qrcode.jpeg}};
+            \draw[Primary!40, line width=3pt, rounded corners=8pt] 
+                (qrcode.south west) rectangle (qrcode.north east);
+            \draw[Secondary!20, line width=6pt, rounded corners=10pt] 
+                (qrcode.south west) ++(-0.15,0.15) rectangle 
+                (qrcode.north east) ++(0.15,-0.15);
+        \end{tikzpicture}\\[0.3cm]
+        
+        {\footnotesize \textcolor{DarkBg!70}{\texttt{pickmydish.duckdns.org}}}\\[0.5cm]
+        {\scriptsize \textcolor{gray}{Mobile app APK available for download}}
+    \end{columns}
     
-    {\small \faGithub\ \href{https://github.com/Kynmmarshall/Pick-My-Dish}{GitHub Repository}}\\
-    {\small \faGlobe\ \href{https://pickmydish.duckdns.org}{Live Application}}\\[1.5cm]
-    
-    {\footnotesize \textcolor{gray}{ICT University - SEN3140 | January 2026}}
+    \vspace*{1cm}
 \end{frame}
 
 \end{document}
