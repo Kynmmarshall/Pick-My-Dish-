@@ -29,7 +29,7 @@ class _LoginScreenState extends State<LoginScreen> {
       messenger.showSnackBar(
         SnackBar(
           content: Text('Please fill in all fields', style: text),
-          backgroundColor: Theme.of(context).primaryColor,
+          backgroundColor: Colors.orange,
         ),
       );
       return;
@@ -40,7 +40,7 @@ class _LoginScreenState extends State<LoginScreen> {
       barrierDismissible: false,
       builder: (context) => Center(
         child: CircularProgressIndicator(
-          color: Theme.of(context).primaryColor,
+          color: Colors.orange,
         ),
       ),
     );
@@ -89,7 +89,7 @@ class _LoginScreenState extends State<LoginScreen> {
         messenger.showSnackBar(
           SnackBar(
             content: Text('Invalid email or password', style: text),
-            backgroundColor: Theme.of(context).colorScheme.error,
+            backgroundColor: Colors.red,
           ),
         );
       }
@@ -100,7 +100,7 @@ class _LoginScreenState extends State<LoginScreen> {
       messenger.showSnackBar(
         SnackBar(
           content: Text('Connection error: $e', style: text),
-          backgroundColor: Theme.of(context).colorScheme.error,
+          backgroundColor: Colors.red,
         ),
       );
     }
@@ -108,12 +108,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final primaryColor = theme.primaryColor;
-    final surfaceColor = theme.scaffoldBackgroundColor;
-    final onSurfaceColor = theme.textTheme.bodyMedium?.color ?? theme.textTheme.bodyLarge?.color;
-    final buttonTextColor = theme.floatingActionButtonTheme.foregroundColor ?? theme.textTheme.titleLarge?.color;
-    return Scaffold(
+  return Scaffold(
       body: Container(
         width: double.infinity,
         height: double.infinity,
@@ -131,8 +126,8 @@ class _LoginScreenState extends State<LoginScreen> {
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    surfaceColor.withValues(alpha: 0.0),
-                    surfaceColor.withValues(alpha: 0.9),
+                    Colors.black.withValues(alpha: 0.0),
+                    Colors.black.withValues(alpha: 0.9),
                   ],
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
@@ -156,13 +151,13 @@ class _LoginScreenState extends State<LoginScreen> {
 
                       const SizedBox(height: 10),
 
-                      Text("PICK MY DISH", style: title),
+                      Text("PICK MY DISH", style: title2),
 
-                      Text("Cook in easy way", style: text),
+                      Text("Cook in easy way", style: text2),
 
                       const SizedBox(height: 5),
 
-                      Text("Login", style: title),
+                      Text("Login", style: title2),
 
                       const SizedBox(height: 15),
 
@@ -170,7 +165,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         children: [
                           Icon(
                             Icons.email,
-                            color: onSurfaceColor,
+                            color: Colors.white,
                             size: iconSize,
                           ),
                           const SizedBox(width: 10),
@@ -180,7 +175,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               style: text,
                               decoration: InputDecoration(
                                 hintText: "Email Address",
-                                hintStyle: placeHolder,
+                                hintStyle: placeHolder2,
                               ),
                             ),
                           ),
@@ -193,7 +188,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         children: [
                           Icon(
                             Icons.key,
-                            color: onSurfaceColor,
+                            color: Colors.white,
                             size: iconSize,
                           ),
                           const SizedBox(width: 10),
@@ -204,13 +199,13 @@ class _LoginScreenState extends State<LoginScreen> {
                               obscureText: !_isPasswordVisible,
                               decoration: InputDecoration(
                                 hintText: "Password",
-                                hintStyle: placeHolder,
+                                hintStyle: placeHolder2,
                                 suffixIcon: IconButton(
                                   icon: Icon(
                                     _isPasswordVisible
                                         ? Icons.visibility
                                         : Icons.visibility_off,
-                                    color: onSurfaceColor,
+                                    color: Colors.white,
                                   ),
                                   onPressed: () {
                                     setState(() {
@@ -250,7 +245,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ElevatedButton(
                         onPressed: _login,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: primaryColor,
+                          backgroundColor: Colors.orange,
                           minimumSize: const Size(double.infinity, 50),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10),
@@ -259,7 +254,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         child: Text(
                           "Login",
                           style: title.copyWith(fontSize: 20,
-                          color: buttonTextColor,),
+                          color: Colors.white,),
                           
                         ),
                       ),
@@ -270,7 +265,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Text("Not Registered Yet? ", style: footer),
+                          Text("Not Registered Yet? ", style: footer2),
                           GestureDetector(
                             onTap: () {
                               Navigator.push(

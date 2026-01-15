@@ -20,11 +20,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final primaryColor = theme.primaryColor;
-    final onSurfaceColor = theme.textTheme.bodyMedium?.color ?? theme.textTheme.bodyLarge?.color;
-    final surfaceColor = theme.scaffoldBackgroundColor;
-    final buttonTextColor = theme.floatingActionButtonTheme.foregroundColor ?? theme.textTheme.titleLarge?.color;
     return Scaffold(
       body: Container(
             width: double.infinity,
@@ -43,8 +38,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                     surfaceColor.withValues(alpha: 0.0),
-                     surfaceColor.withValues(alpha: 0.9),
+                     Colors.black.withValues(alpha: 0.0),
+                     Colors.black.withValues(alpha: 0.9),
                     ],
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
@@ -66,19 +61,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                   Text(
                     "PICK MY DISH",
-                    style: title,
+                    style: title2,
                     ),
 
                   Text(
                     "Cook in easy way",
-                    style: text,
+                    style: text2,
                   ),
 
                   SizedBox(height: 5),
 
                   Text(
                     "Register",
-                    style: title,
+                    style: title2,
                   ),
 
                   SizedBox(height: 15),   
@@ -87,7 +82,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     children: [
                       Icon(
                         Icons.person,
-                        color: onSurfaceColor,
+                        color: Colors.white,
                         size: iconSize,
                       ),
                       SizedBox(width: 10,),
@@ -97,7 +92,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         controller: _userNameController,
                         decoration: InputDecoration(
                           hintText: "User Name",
-                          hintStyle: placeHolder,
+                          hintStyle: placeHolder2,
                         ),
                       ),
                     )],
@@ -109,7 +104,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     children: [
                       Icon(
                         Icons.email,
-                        color: onSurfaceColor,
+                        color: Colors.white,
                         size: iconSize,
                       ),
                       SizedBox(width: 10,),
@@ -119,7 +114,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         controller: _emailController,
                         decoration: InputDecoration(
                           hintText: "Email Address",
-                          hintStyle: placeHolder,
+                          hintStyle: placeHolder2,
                         ),
                       ),
                     )],
@@ -139,8 +134,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         decoration: InputDecoration(
                           labelText: 'Password',
                           hintText: 'Enter your password',
-                          hintStyle: placeHolder,
-                          labelStyle: placeHolder,
+                          hintStyle: placeHolder2,
+                          labelStyle: placeHolder2,
                           border: OutlineInputBorder(),
                         ),
                         onChanged: (value) {
@@ -160,8 +155,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         decoration: InputDecoration(
                           labelText: 'Confirm Password',
                           hintText: 'Confirm your password',
-                          hintStyle: placeHolder,
-                          labelStyle: placeHolder,
+                          hintStyle: placeHolder2,
+                          labelStyle: placeHolder2,
                           border: OutlineInputBorder(),
                         ),
                       ),
@@ -174,12 +169,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ElevatedButton(
                     onPressed: _register,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: primaryColor,
+                      backgroundColor: Colors.orange,
                       minimumSize: Size(double.infinity, 50),
                     ),
                     child: Text(
                       "Register",
-                      style:  title.copyWith(color: buttonTextColor),
+                      style:  title2,
                     ),
                   ),
                   
@@ -195,7 +190,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     children: [
                       Text(
                         "Already Registered? ",
-                        style: footer,),
+                        style: footer2,),
                      GestureDetector(
                       onTap: () {
                         // Navigate to login screen
