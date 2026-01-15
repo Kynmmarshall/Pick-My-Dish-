@@ -6,6 +6,7 @@ class IngredientSelector extends StatefulWidget {
   final Function(List<int>) onSelectionChanged;
   final String? hintText;
   final TextStyle? hintStyle;
+  final TextStyle? textStyle;
   final bool allowAddingNew; // <-- ADD THIS
   final Future<List<Map<String, dynamic>>> Function()? ingredientLoader;
   
@@ -15,6 +16,7 @@ class IngredientSelector extends StatefulWidget {
     required this.onSelectionChanged,
     this.hintText = "Select ingredients",
     this.hintStyle,
+    this.textStyle,
     this.allowAddingNew = true, // <-- Default to true for upload screen
     this.ingredientLoader,
   });
@@ -116,7 +118,7 @@ class _IngredientSelectorState extends State<IngredientSelector> {
           ),
           child: TextField(
             controller: _searchController,
-            style: const TextStyle(color: Colors.white),
+            style: widget.textStyle ?? const TextStyle(color: Colors.white),
             onChanged: _filterIngredients,
             decoration: InputDecoration(
               hintText: widget.hintText,

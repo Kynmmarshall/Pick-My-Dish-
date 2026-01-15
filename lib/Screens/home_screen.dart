@@ -744,6 +744,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 },
                 hintText: 'Search ingredients...',
                 hintStyle: placeHolder,
+                textStyle: text.copyWith(
+                  color: theme.textTheme.bodyLarge?.color ??
+                      theme.textTheme.bodyMedium?.color,
+                ),
                 allowAddingNew: false,
                 ingredientLoader: widget.ingredientLoaderOverride,
               ),
