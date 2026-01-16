@@ -794,7 +794,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 backgroundColor: primaryColor,
                 padding: const EdgeInsets.symmetric(vertical: 15),
               ),
-              child: Text("Generate Personalized Recipes", style: text),
+              child: Text("Generate Personalized Recipes", style: text2),
             ),
           ),
         ],

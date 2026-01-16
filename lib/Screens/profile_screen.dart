@@ -337,7 +337,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ),
                         child: Text(
                           "Edit Profile",
-                          style: text.copyWith(fontSize: 20),
+                          style: text2.copyWith(fontSize: 20),
                         ),
                       ),
 
@@ -348,7 +348,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       width: double.infinity,
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
-                        color: theme.cardColor.withValues(alpha: 0.6), 
+                        color: theme.cardColor.withValues(alpha: 1), 
                         borderRadius: BorderRadius.circular(15),
                       ),
                       child: Column(
@@ -395,7 +395,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           backgroundColor: theme.colorScheme.error,
                           minimumSize: const Size(double.infinity, 50),
                         ),
-                        child: Text("Logout", style: text.copyWith(fontSize: 20)),
+                        child: Text("Logout", style: text2.copyWith(fontSize: 20)),
                       ),
                     ),
                     

@@ -311,6 +311,13 @@ class RecipesScreenState extends State<RecipesScreen> {
         decoration: BoxDecoration(
           color: theme.cardColor,
           borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+          BoxShadow(
+            color: Theme.of(context).shadowColor.withValues(alpha: 0.25),
+            blurRadius: 5,
+            offset: const Offset(-2, 5),
+          ),
+        ],
         ),
         child: Stack(
           children: [

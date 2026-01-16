@@ -6,7 +6,7 @@ ThemeData lightTheme = ThemeData(
   brightness: Brightness.light,
 primaryColor: Colors.orange,
 cardColor: const Color.fromARGB(255, 255, 255, 255),
-scaffoldBackgroundColor: const Color.fromARGB(255, 254, 249, 231),
+scaffoldBackgroundColor: const Color.fromARGB(255, 254, 246, 217),
   
   appBarTheme: const AppBarTheme(
     backgroundColor: Color.fromARGB(255, 254, 249, 231),
